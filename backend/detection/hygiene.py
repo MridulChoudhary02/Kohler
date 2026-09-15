@@ -33,8 +33,11 @@ HYGIENE_LEAD_TIMES = {
 WINDOW_MINUTES = 60
 
 
-def _parse_ts(s: str) -> datetime:
-    dt = datetime.fromisoformat(s)
+def _parse_ts(s: str | datetime) -> datetime:
+    if isinstance(s, datetime):
+        dt = s
+    else:
+        dt = datetime.fromisoformat(str(s))
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
     return dt
