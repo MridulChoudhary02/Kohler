@@ -12,14 +12,22 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 from app.main import app
 from app.core.database import get_db
 
 async def override_get_db():
     mock_session = AsyncMock()
-    mock_res = AsyncMock()
+    mock_res = MagicMock()
+    mock_res.all.return_value = []
+    mock_res.first.return_value = None
     mock_res.scalar_one_or_none.return_value = None
+
+    mock_scalars = MagicMock()
+    mock_scalars.all.return_value = []
+    mock_scalars.first.return_value = None
+    mock_res.scalars.return_value = mock_scalars
+
     mock_session.execute.return_value = mock_res
     yield mock_session
 

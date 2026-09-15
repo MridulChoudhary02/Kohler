@@ -198,7 +198,7 @@ class DetectionEngine:
                 dropout_at = state.last_reading_ts + timedelta(seconds=SENSOR_DROPOUT_GAP_S)
                 ev = self._make_sensor_fault(
                     state, sensor_id, dropout_at,
-                    sub_type="sensor_dropout", bp=bp,
+                    sub_type="sensor_dropout", bp=bp, health_score=health_score,
                 )
                 events.append(ev)
                 state.in_dropout_episode = True
@@ -212,7 +212,7 @@ class DetectionEngine:
         # ── 1. Sensor flatline ────────────────────────────────────────────────
         if diag_status == "flatline":
             if not state.in_flatline_episode:
-                ev = self._make_sensor_fault(state, sensor_id, ts, "sensor_flatline", bp)
+                ev = self._make_sensor_fault(state, sensor_id, ts, "sensor_flatline", bp, health_score=health_score)
                 events.append(ev)
                 state.in_flatline_episode = True
             state.candidate_start_ts = None   # reset any pending leak candidate
@@ -378,11 +378,12 @@ class DetectionEngine:
         detected_at: datetime,
         sub_type:  str,
         bp:        Optional[BaselineProfile],
+        health_score: float = 0.0,
     ) -> dict[str, Any]:
         warmup = bp.warmup_complete if bp else False
         # Sensor faults are dispatched regardless of warmup (a dead sensor is
         # always critical) but we still log the warmup flag for transparency.
-        status = "dispatched" if warmup else "logged"
+        status = "dispatched"
         return _make_event(
             fixture_id      = state.fixture_id,
             sensor_id       = sensor_id,
@@ -395,5 +396,5 @@ class DetectionEngine:
             ucl             = bp.ucl if bp else 0.0,
             warmup_complete = warmup,
             status          = status,
-            extra           = {"sub_type": sub_type},
+            extra           = {"sub_type": sub_type, "sensor_health_score": round(health_score, 4)},
         )
