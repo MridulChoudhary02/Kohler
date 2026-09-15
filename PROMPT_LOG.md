@@ -639,3 +639,37 @@ reimplementing detection logic.
 
 
 ---
+
+## [2026-09-16 00:07] — Phase 5: Ticket Priority & Dispatch Engine
+
+**Trigger:** User prompt instruction (Phase 5 implementation)
+
+**Prompt/instruction used:** Create and check out a new branch `phase-5-ticket-dispatch` from `main`. Implement PRD Section 10 (Ticket Priority & Dispatch). State proposed definitions for `normalized_estimated_waste` and `SLA_urgency_factor` before code. Implement `ticket_service.py`, wire ticket creation in `telemetry.py`, extend `/tickets` queries and status transitions (`acknowledge`/`resolve`), write unit tests in `test_ticket_priority.py`, and append PROMPT_LOG.md.
+
+**Action taken:**
+1. Created and checked out new git branch `phase-5-ticket-dispatch` from `main`.
+2. Defined `normalized_estimated_waste` and `SLA_urgency_factor` per PRD Section 10 formula requirements.
+3. Created `backend/app/services/ticket_service.py`: Computes priority score (0-100 scale), creates `Ticket` entities for dispatched events with `sla_due` calculated from zone SLA policies, and auto-escalates overdue tickets with a +25 point boost.
+4. Created DB migration `0003_ticket_timestamps.py` and updated `Ticket` model to include `acknowledged_at` and `resolved_at` timestamps.
+5. Updated `backend/app/api/telemetry.py`: Automatically creates and persists `Ticket` rows upon ingesting dispatched detection events.
+6. Updated `backend/app/api/events.py`: Extended `GET /api/v1/tickets` with filtering (`status`, `zone_id`, `assigned_tech_id`) and sorting by `priority_score` descending. Added `POST /tickets/{id}/acknowledge` and `POST /tickets/{id}/resolve` endpoints for status transitions with timestamps.
+7. Created `backend/detection/tests/test_ticket_priority.py`: Added 3 unit tests verifying Tier 1 vs Tier 4 ranking, exact priority formula math (85.75 score), and auto-escalation priority boost (+25 points). Verified 13/13 test suite passing.
+
+**Design Decisions & Definitions:**
+- **`normalized_estimated_waste` (0.0 to 1.0):**
+  - `leak`: `min(1.0, max(0.0, evidence_value / 60.0))` where 60 L/hr continuous flow represents max waste severity (1.0).
+  - `predictive_hygiene`: `1.0 - (evidence_value / 30.0)` if `evidence_value <= 30` else `0.0` (0 minutes remaining until breach represents max urgency 1.0).
+  - `sensor_fault`: `1.0 - min(1.0, max(0.0, evidence_value))` (sensor health score 0.0 represents max fault urgency 1.0).
+- **`SLA_urgency_factor` (0.0 to 1.0):**
+  - `1.0 - (response_minutes / 120.0)` measuring operational tightness of the zone's base SLA response window (15 min SLA = 0.875, 120 min SLA = 0.0).
+- **Auto-escalation Boost:**
+  - Overdue open tickets (`now > sla_due`) receive `priority_score = min(100.0, priority_score + 25.0)`, boosting them by a full criticality tier so they jump to the top of dispatch queues.
+
+**Files touched:**
+- [NEW] `backend/app/services/ticket_service.py`
+- [NEW] `backend/alembic/versions/0003_ticket_timestamps.py`
+- [NEW] `backend/detection/tests/test_ticket_priority.py`
+- [MODIFY] `backend/app/models/models.py`
+- [MODIFY] `backend/app/api/telemetry.py`
+- [MODIFY] `backend/app/api/events.py`
+- [MODIFY] `PROMPT_LOG.md`
