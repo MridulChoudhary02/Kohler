@@ -124,7 +124,16 @@ class BaselineProfile(Base):
     mean_flush_duration_s  = Column(Float, nullable=False, default=10.0)  # seconds
     last_updated           = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
 
+    # ── Warm-up state (PRD Section 7.5) ────────────────────────────────────────
+    # False = baseline is an untrusted placeholder; detection events are logged
+    # only, never auto-dispatched, until warmup_complete flips to True.
+    # The detection engine (Phase 2) sets this to True after BASELINE_WARMUP_DAYS
+    # of real telemetry has accumulated.
+    warmup_complete    = Column(Boolean, nullable=False, default=False)
+    warmup_started_at  = Column(DateTime(timezone=True), nullable=True)
+
     fixture = relationship("Fixture", back_populates="baseline_profile")
+
 
 
 # ─────────────────────────────────────────────

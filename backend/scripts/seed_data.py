@@ -158,37 +158,42 @@ SEED = {
         {"sensor_id": "sen-lob-003", "fixture_id": "fix-lob-003", "sensor_type": "flow_occupancy_combined", "status": "active"},
     ],
 
-    # ── BASELINE_PROFILES — sensible starting values per fixture type ──────────
-    # PRD Section 7.1: Fixture types have different "normal" flow signatures.
-    # mean_flush_volume (litres): flush_valve ~6L, urinal ~3L, shower N/A
-    # mean_off_flow: near-zero (0.0) for all when truly idle
-    # std_off_flow: tight for high-tier fixtures, slightly wider for older lobbies
+    # ── BASELINE_PROFILES ──────────────────────────────────────────────────────
+    # IMPORTANT: warmup_complete=False on ALL seeded profiles.
+    # These are UNTRUSTED PLACEHOLDERS (engineering estimates), not profiles
+    # learned from real telemetry. The detection engine (Phase 2) must treat
+    # every fixture as being in warm-up until 7 days of real telemetry
+    # accumulate and it sets warmup_complete=True.
+    #
+    # PRD Section 7.1: different fixture types have different normal signatures.
+    # mean_flush_volume (L): flush_valve ~6L, urinal ~3-3.5L, shower N/A (continuous)
+    # std_off_flow: tighter for newer/higher-tier fixtures
     "baseline_profiles": [
         # ICU (Tier 1) — tight baselines, new fixtures
-        {"fixture_id": "fix-icu-001", "mean_off_flow": 0.0, "std_off_flow": 0.03, "mean_flush_volume": 0.0,  "mean_flush_duration_s": 0.0,  "last_updated": "2026-09-15T00:00:00Z"},
-        {"fixture_id": "fix-icu-002", "mean_off_flow": 0.0, "std_off_flow": 0.03, "mean_flush_volume": 6.0,  "mean_flush_duration_s": 8.5,  "last_updated": "2026-09-15T00:00:00Z"},
-        {"fixture_id": "fix-icu-003", "mean_off_flow": 0.0, "std_off_flow": 0.03, "mean_flush_volume": 6.0,  "mean_flush_duration_s": 8.5,  "last_updated": "2026-09-15T00:00:00Z"},
-        {"fixture_id": "fix-icu-004", "mean_off_flow": 0.0, "std_off_flow": 0.05, "mean_flush_volume": 0.0,  "mean_flush_duration_s": 0.0,  "last_updated": "2026-09-15T00:00:00Z"},
-        {"fixture_id": "fix-icu-005", "mean_off_flow": 0.0, "std_off_flow": 0.03, "mean_flush_volume": 0.0,  "mean_flush_duration_s": 0.0,  "last_updated": "2026-09-15T00:00:00Z"},
+        {"fixture_id": "fix-icu-001", "mean_off_flow": 0.0,  "std_off_flow": 0.03, "mean_flush_volume": 0.0, "mean_flush_duration_s": 0.0,  "last_updated": "2026-09-15T00:00:00Z", "warmup_complete": False, "warmup_started_at": "2026-09-15T00:00:00Z"},
+        {"fixture_id": "fix-icu-002", "mean_off_flow": 0.0,  "std_off_flow": 0.03, "mean_flush_volume": 6.0, "mean_flush_duration_s": 8.5,  "last_updated": "2026-09-15T00:00:00Z", "warmup_complete": False, "warmup_started_at": "2026-09-15T00:00:00Z"},
+        {"fixture_id": "fix-icu-003", "mean_off_flow": 0.0,  "std_off_flow": 0.03, "mean_flush_volume": 6.0, "mean_flush_duration_s": 8.5,  "last_updated": "2026-09-15T00:00:00Z", "warmup_complete": False, "warmup_started_at": "2026-09-15T00:00:00Z"},
+        {"fixture_id": "fix-icu-004", "mean_off_flow": 0.0,  "std_off_flow": 0.05, "mean_flush_volume": 0.0, "mean_flush_duration_s": 0.0,  "last_updated": "2026-09-15T00:00:00Z", "warmup_complete": False, "warmup_started_at": "2026-09-15T00:00:00Z"},
+        {"fixture_id": "fix-icu-005", "mean_off_flow": 0.0,  "std_off_flow": 0.03, "mean_flush_volume": 0.0, "mean_flush_duration_s": 0.0,  "last_updated": "2026-09-15T00:00:00Z", "warmup_complete": False, "warmup_started_at": "2026-09-15T00:00:00Z"},
         # OT (Tier 1) — scrub taps run longer per use
-        {"fixture_id": "fix-ot-001",  "mean_off_flow": 0.0, "std_off_flow": 0.02, "mean_flush_volume": 0.0,  "mean_flush_duration_s": 0.0,  "last_updated": "2026-09-15T00:00:00Z"},
-        {"fixture_id": "fix-ot-002",  "mean_off_flow": 0.0, "std_off_flow": 0.02, "mean_flush_volume": 0.0,  "mean_flush_duration_s": 0.0,  "last_updated": "2026-09-15T00:00:00Z"},
-        {"fixture_id": "fix-ot-003",  "mean_off_flow": 0.0, "std_off_flow": 0.02, "mean_flush_volume": 0.0,  "mean_flush_duration_s": 0.0,  "last_updated": "2026-09-15T00:00:00Z"},
-        {"fixture_id": "fix-ot-004",  "mean_off_flow": 0.0, "std_off_flow": 0.03, "mean_flush_volume": 0.0,  "mean_flush_duration_s": 0.0,  "last_updated": "2026-09-15T00:00:00Z"},
+        {"fixture_id": "fix-ot-001",  "mean_off_flow": 0.0,  "std_off_flow": 0.02, "mean_flush_volume": 0.0, "mean_flush_duration_s": 0.0,  "last_updated": "2026-09-15T00:00:00Z", "warmup_complete": False, "warmup_started_at": "2026-09-15T00:00:00Z"},
+        {"fixture_id": "fix-ot-002",  "mean_off_flow": 0.0,  "std_off_flow": 0.02, "mean_flush_volume": 0.0, "mean_flush_duration_s": 0.0,  "last_updated": "2026-09-15T00:00:00Z", "warmup_complete": False, "warmup_started_at": "2026-09-15T00:00:00Z"},
+        {"fixture_id": "fix-ot-003",  "mean_off_flow": 0.0,  "std_off_flow": 0.02, "mean_flush_volume": 0.0, "mean_flush_duration_s": 0.0,  "last_updated": "2026-09-15T00:00:00Z", "warmup_complete": False, "warmup_started_at": "2026-09-15T00:00:00Z"},
+        {"fixture_id": "fix-ot-004",  "mean_off_flow": 0.0,  "std_off_flow": 0.03, "mean_flush_volume": 0.0, "mean_flush_duration_s": 0.0,  "last_updated": "2026-09-15T00:00:00Z", "warmup_complete": False, "warmup_started_at": "2026-09-15T00:00:00Z"},
         # Ward (Tier 2)
-        {"fixture_id": "fix-ward-001","mean_off_flow": 0.0, "std_off_flow": 0.05, "mean_flush_volume": 0.0,  "mean_flush_duration_s": 0.0,  "last_updated": "2026-09-15T00:00:00Z"},
-        {"fixture_id": "fix-ward-002","mean_off_flow": 0.0, "std_off_flow": 0.05, "mean_flush_volume": 6.0,  "mean_flush_duration_s": 10.0, "last_updated": "2026-09-15T00:00:00Z"},
-        {"fixture_id": "fix-ward-003","mean_off_flow": 0.0, "std_off_flow": 0.05, "mean_flush_volume": 3.5,  "mean_flush_duration_s": 6.0,  "last_updated": "2026-09-15T00:00:00Z"},
-        {"fixture_id": "fix-ward-004","mean_off_flow": 0.0, "std_off_flow": 0.05, "mean_flush_volume": 0.0,  "mean_flush_duration_s": 0.0,  "last_updated": "2026-09-15T00:00:00Z"},
-        {"fixture_id": "fix-ward-005","mean_off_flow": 0.0, "std_off_flow": 0.05, "mean_flush_volume": 0.0,  "mean_flush_duration_s": 0.0,  "last_updated": "2026-09-15T00:00:00Z"},
+        {"fixture_id": "fix-ward-001","mean_off_flow": 0.0,  "std_off_flow": 0.05, "mean_flush_volume": 0.0, "mean_flush_duration_s": 0.0,  "last_updated": "2026-09-15T00:00:00Z", "warmup_complete": False, "warmup_started_at": "2026-09-15T00:00:00Z"},
+        {"fixture_id": "fix-ward-002","mean_off_flow": 0.0,  "std_off_flow": 0.05, "mean_flush_volume": 6.0, "mean_flush_duration_s": 10.0, "last_updated": "2026-09-15T00:00:00Z", "warmup_complete": False, "warmup_started_at": "2026-09-15T00:00:00Z"},
+        {"fixture_id": "fix-ward-003","mean_off_flow": 0.0,  "std_off_flow": 0.05, "mean_flush_volume": 3.5, "mean_flush_duration_s": 6.0,  "last_updated": "2026-09-15T00:00:00Z", "warmup_complete": False, "warmup_started_at": "2026-09-15T00:00:00Z"},
+        {"fixture_id": "fix-ward-004","mean_off_flow": 0.0,  "std_off_flow": 0.05, "mean_flush_volume": 0.0, "mean_flush_duration_s": 0.0,  "last_updated": "2026-09-15T00:00:00Z", "warmup_complete": False, "warmup_started_at": "2026-09-15T00:00:00Z"},
+        {"fixture_id": "fix-ward-005","mean_off_flow": 0.0,  "std_off_flow": 0.05, "mean_flush_volume": 0.0, "mean_flush_duration_s": 0.0,  "last_updated": "2026-09-15T00:00:00Z", "warmup_complete": False, "warmup_started_at": "2026-09-15T00:00:00Z"},
         # Lab (Tier 3) — older fixtures, slightly wider std
-        {"fixture_id": "fix-lab-001", "mean_off_flow": 0.0, "std_off_flow": 0.07, "mean_flush_volume": 0.0,  "mean_flush_duration_s": 0.0,  "last_updated": "2026-09-15T00:00:00Z"},
-        {"fixture_id": "fix-lab-002", "mean_off_flow": 0.0, "std_off_flow": 0.07, "mean_flush_volume": 0.0,  "mean_flush_duration_s": 0.0,  "last_updated": "2026-09-15T00:00:00Z"},
-        {"fixture_id": "fix-lab-003", "mean_off_flow": 0.0, "std_off_flow": 0.07, "mean_flush_volume": 6.0,  "mean_flush_duration_s": 11.0, "last_updated": "2026-09-15T00:00:00Z"},
-        # Lobby (Tier 4) — oldest, widest normal variance
-        {"fixture_id": "fix-lob-001", "mean_off_flow": 0.02,"std_off_flow": 0.10, "mean_flush_volume": 0.0,  "mean_flush_duration_s": 0.0,  "last_updated": "2026-09-15T00:00:00Z"},
-        {"fixture_id": "fix-lob-002", "mean_off_flow": 0.01,"std_off_flow": 0.10, "mean_flush_volume": 6.5,  "mean_flush_duration_s": 12.0, "last_updated": "2026-09-15T00:00:00Z"},
-        {"fixture_id": "fix-lob-003", "mean_off_flow": 0.01,"std_off_flow": 0.10, "mean_flush_volume": 3.5,  "mean_flush_duration_s": 7.0,  "last_updated": "2026-09-15T00:00:00Z"},
+        {"fixture_id": "fix-lab-001", "mean_off_flow": 0.0,  "std_off_flow": 0.07, "mean_flush_volume": 0.0, "mean_flush_duration_s": 0.0,  "last_updated": "2026-09-15T00:00:00Z", "warmup_complete": False, "warmup_started_at": "2026-09-15T00:00:00Z"},
+        {"fixture_id": "fix-lab-002", "mean_off_flow": 0.0,  "std_off_flow": 0.07, "mean_flush_volume": 0.0, "mean_flush_duration_s": 0.0,  "last_updated": "2026-09-15T00:00:00Z", "warmup_complete": False, "warmup_started_at": "2026-09-15T00:00:00Z"},
+        {"fixture_id": "fix-lab-003", "mean_off_flow": 0.0,  "std_off_flow": 0.07, "mean_flush_volume": 6.0, "mean_flush_duration_s": 11.0, "last_updated": "2026-09-15T00:00:00Z", "warmup_complete": False, "warmup_started_at": "2026-09-15T00:00:00Z"},
+        # Lobby (Tier 4) — oldest fixtures, widest normal variance
+        {"fixture_id": "fix-lob-001", "mean_off_flow": 0.02, "std_off_flow": 0.10, "mean_flush_volume": 0.0, "mean_flush_duration_s": 0.0,  "last_updated": "2026-09-15T00:00:00Z", "warmup_complete": False, "warmup_started_at": "2026-09-15T00:00:00Z"},
+        {"fixture_id": "fix-lob-002", "mean_off_flow": 0.01, "std_off_flow": 0.10, "mean_flush_volume": 6.5, "mean_flush_duration_s": 12.0, "last_updated": "2026-09-15T00:00:00Z", "warmup_complete": False, "warmup_started_at": "2026-09-15T00:00:00Z"},
+        {"fixture_id": "fix-lob-003", "mean_off_flow": 0.01, "std_off_flow": 0.10, "mean_flush_volume": 3.5, "mean_flush_duration_s": 7.0,  "last_updated": "2026-09-15T00:00:00Z", "warmup_complete": False, "warmup_started_at": "2026-09-15T00:00:00Z"},
     ],
 
     # ── HYGIENE_COUNTERS — initial state (all just cleaned) ───────────────────
@@ -219,7 +224,8 @@ SEED = {
 
 
 # ── Hygiene threshold reference (from PRD Section 5 table) ────────────────────
-# Used by the detection engine (Phase 3) — stored here for config clarity
+# Domain data (zone threshold values), not algorithm tuning — lives here, not config.py.
+# The detection engine (Phase 3) imports this to check uses_since_clean.
 HYGIENE_THRESHOLDS = {
     "Tier 1": {"min": 15, "max": 20},
     "Tier 2": {"min": 25, "max": 30},
@@ -227,18 +233,7 @@ HYGIENE_THRESHOLDS = {
     "Tier 4": {"min": 50, "max": 60},
 }
 
-# ── EWMA confirmation windows per tier (PRD Section 7.2) ──────────────────────
-CONFIRMATION_WINDOW_MINUTES = {
-    "Tier 1": 3,
-    "Tier 2": 5,
-    "Tier 3": 7,
-    "Tier 4": 10,
-}
-
-# ── Zone criticality weights for priority scoring (PRD Section 10) ────────────
-CRITICALITY_WEIGHTS = {
-    "Tier 1": 1.00,
-    "Tier 2": 0.75,
-    "Tier 3": 0.50,
-    "Tier 4": 0.25,
-}
+# NOTE: All other tunable constants (EWMA λ, UCL L, confirmation windows per tier,
+# confidence weights w1/w2/w3, sensor health weights, priority scoring weights,
+# zone criticality weights) are defined in app/core/config.py as named Settings
+# fields so they can be overridden via environment variables without code changes.

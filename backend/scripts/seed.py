@@ -85,13 +85,17 @@ async def run_seed():
             now = datetime.now(timezone.utc)
             for bp in SEED["baseline_profiles"]:
                 last_updated = datetime.fromisoformat(bp["last_updated"].replace("Z", "+00:00"))
+                warmup_started = datetime.fromisoformat(bp["warmup_started_at"].replace("Z", "+00:00"))
                 await conn.execute(
                     "INSERT INTO baseline_profiles "
-                    "(fixture_id, mean_off_flow, std_off_flow, mean_flush_volume, mean_flush_duration_s, last_updated) "
-                    "VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING",
+                    "(fixture_id, mean_off_flow, std_off_flow, mean_flush_volume, mean_flush_duration_s, "
+                    "last_updated, warmup_complete, warmup_started_at) "
+                    "VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT DO NOTHING",
                     bp["fixture_id"], bp["mean_off_flow"], bp["std_off_flow"],
-                    bp["mean_flush_volume"], bp["mean_flush_duration_s"], last_updated
+                    bp["mean_flush_volume"], bp["mean_flush_duration_s"],
+                    last_updated, bp["warmup_complete"], warmup_started
                 )
+
 
             # 8. Hygiene Counters
             print("  → hygiene_counters")

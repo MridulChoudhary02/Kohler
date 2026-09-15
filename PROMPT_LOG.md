@@ -70,3 +70,63 @@ All choices documented in README.md.
 **Rationale / deviations from PRD:** Minor interpretation: PRD says "≥4 zones covering all 4 criticality tiers" — created 5 zones (2 at Tier 1: ICU and OT) because the PRD Section 5 table explicitly lists both ICU and OT as Tier 1 examples and they are physically distinct zones in a hospital. This meets the PRD's requirement and is faithful to its intent. All other field names, entity names, and constraint rules follow Section 6 verbatim.
 
 ---
+
+## [2026-09-15 14:16] — Phase 0 review: baseline warm-up flag + config completeness audit
+
+**Trigger:** User instruction (pre-Phase 1 validation)
+
+**Prompt/instruction used:** Before I approve Phase 0, confirm two things and fix if needed:
+
+1. Baseline warm-up: are the seeded baseline_profiles meant to be untrusted
+   placeholders (so Phase 2's 7-day warm-up rule from PRD Section 7.5 has
+   something real to test), or deliberately pre-warmed for demo purposes?
+   State which, and if they're not explicitly one or the other, make it
+   an explicit field/flag now rather than an ambiguous default.
+
+2. Confirm config.py contains every tunable constant named in PRD Sections
+   7-10 (EWMA λ, UCL multiplier L, baseline update α, confidence weights
+   w1/w2/w3, per-tier confirmation windows, hygiene lead-time target,
+   sensor health formula weights) as named values, not hardcoded in logic
+   I haven't seen yet. List what's there and add anything missing.
+
+Log both as a PROMPT_LOG.md entry, same as before.
+
+**Action taken:** 
+1. Baseline warm-up decision: seeded baseline_profiles are UNTRUSTED PLACEHOLDERS (initial mathematical guesses, not learned from real telemetry). Added explicit `warmup_complete BOOLEAN NOT NULL DEFAULT FALSE` and `warmup_started_at TIMESTAMP` columns to baseline_profiles. Seed data sets warmup_complete=False and warmup_started_at=now for all fixtures — meaning Phase 2 will correctly suppress auto-dispatch for all seeded fixtures until 7 days of telemetry accumulate. This is the right state for testing the warm-up suppression rule.
+
+2. Config audit found 8 constants missing from config.py (present only as comments or in seed_data.py): CONFIDENCE_W1/W2/W3 (Section 7.5 weights), confirmation windows per tier (Section 7.2), sensor health formula weights and degraded threshold (Section 9), priority score component weights and zone criticality weights (Section 10), hygiene use-rate sliding window (Section 8). Added all as named constants in config.py with PRD-specified default values.
+
+**Files touched:** backend/app/core/config.py, backend/app/models/models.py, backend/alembic/versions/0002_baseline_warmup_flag.py, backend/scripts/seed_data.py
+
+**Rationale / deviations from PRD:** warmup_complete and warmup_started_at are additions beyond the Section 6 ER diagram field list, but they implement the Section 7.5 warm-up rule that the ER diagram entity notes (Section 6, BASELINE_PROFILE bullet) explicitly describe as a required behavior. The PRD says "during this warm-up period, events are logged but not auto-dispatched" — without a persisted flag, this logic has no reliable state to query. This is a required implementation detail, not a feature addition. The PRD says "implementation should not diverge from entity/field names without updating this document" — noted as an intentional, justified extension.
+
+---
+
+## [2026-09-15 14:16] — Phase 1: Telemetry Simulator
+
+**Trigger:** User instruction (same message as Phase 0 review)
+
+**Prompt/instruction used:** Then proceed to Phase 1 (PRD Section 14): the Telemetry Simulator.
+Build it to generate realistic per-fixture time series matching each
+fixture type's expected flow signature, with time-of-day/shift-pattern
+usage curves, flush events, and an occupancy signal — and an injectable
+anomaly mode covering all 5 scenarios: sudden leak, gradual leak, stuck
+valve (post-flush non-return), sensor flatline, sensor dropout.
+
+Critical requirement: every injected anomaly must be logged with its
+ground-truth label (fixture, type, start timestamp, end timestamp) in a
+separate, queryable output — this labeled set is what Phase 2's precision/
+recall testing depends on, so it needs to be reliable and easy to pull
+programmatically, not just visible in console output.
+
+Stop after Phase 1 and show me: a sample of generated telemetry for one
+fixture across a normal day, and a sample of one injected anomaly with its
+ground-truth label. Don't start Phase 2 yet.
+
+**Action taken:** Built 4-file simulator module (simulator/profiles.py, simulator/anomaly.py, simulator/engine.py, simulator/runner.py). FixtureSimulator implements a state machine (IDLE/IN_USE/FLUSHING/POST_FLUSH_DECAY) with Poisson-process use-event scheduling driven by per-fixture-type flow signatures and 24-hour shift-pattern usage curves per tier. All 5 anomaly types implemented. AnomalySpec.to_label_dict() writes ground-truth labels to a separate anomaly_labels.json (not just console). CLI runner accepts --inject, --seed, --date flags for reproducible labeled test sets. Validated by running --inject all for 2026-09-15 with seed=42: produced 57,510 readings across 20 fixtures and 5 ground-truth labels.
+
+**Files touched:** simulator/__init__.py, simulator/profiles.py, simulator/anomaly.py, simulator/engine.py, simulator/runner.py, simulator/output/telemetry.jsonl (generated, not committed), simulator/output/anomaly_labels.json (generated, not committed)
+
+**Rationale / deviations from PRD:** PRD says "traffic burst" is an injectable scenario in Phase 1 — it is not listed as one of the 5 anomaly types in the Phase 1 acceptance criteria but IS listed in the Phase 1 goal description. Decision: traffic burst is handled via the --anomaly-start/--anomaly-duration mechanism against a fixture in a Tier 1 zone (which naturally simulates a burst in the usage curve). This is not a separate anomaly injection because traffic burst is a legitimate usage pattern, not a fault — it produces a real increase in hygiene counter uses_per_minute which Phase 3's prediction engine uses. This distinction is intentional: mixing normal bursts with injected faults would corrupt Phase 2 precision/recall. Will revisit if Phase 3 testing requires explicit traffic burst injection.
+
+---
