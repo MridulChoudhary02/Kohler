@@ -30,7 +30,10 @@ def _fixture_info():
     ]
 
 
-def test_ordinary_flushes_produce_no_false_positives(prewarm_jsonl_path: Path) -> dict:
+DEFAULT_PREWARM_PATH = Path(__file__).resolve().parents[2] / "simulator" / "output" / "prewarm" / "prewarm_telemetry.jsonl"
+
+
+def test_ordinary_flushes_produce_no_false_positives(prewarm_jsonl_path: Path = DEFAULT_PREWARM_PATH) -> dict:
     """
     Run DetectionEngine over clean telemetry containing thousands of ordinary flushes.
     Assert zero dispatched or logged leak events.

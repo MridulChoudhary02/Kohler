@@ -122,6 +122,10 @@ def run_warmup_suppression_test(quiet: bool = False) -> bool:
     return True
 
 
+def test_warmup_suppression():
+    assert run_warmup_suppression_test(quiet=True) is True
+
+
 def main():
     print("=" * 60)
     print("ISOLATED TEST: warm-up suppression")

@@ -55,5 +55,6 @@ class FixtureDetectionState:
 
     # ── Dispatch deduplication ────────────────────────────────────────────────
     # Suppress re-emitting while EWMA remains continuously above UCL.
-    # Set True on event emission; reset False when EWMA drops <= UCL.
+    # Set True on event emission; reset False after N consecutive readings at/below UCL.
     suppress_until_below_ucl: bool = False
+    consecutive_below_ucl_readings: int = 0

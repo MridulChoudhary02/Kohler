@@ -1,0 +1,38 @@
+🔍 Detection runner
+   Telemetry: combined_telemetry.jsonl
+   Baselines: baseline_profiles.json
+   Fixtures with warmup_complete=True: 20/20
+
+✅ Detection complete.
+   Total events:  41
+   Dispatched:    39
+   Logged-only:   2
+   Leak events:   35
+   Sensor faults: 6
+   Output:        simulator/output/detection_events.jsonl
+
+================================================================
+SCORING (dispatched events only)
+================================================================
+  Precision  : 1.000  (target ≥ 0.90, PRD §2)
+  Recall     : 0.933  (target ≥ 0.85, PRD §2)
+  F1         : 0.966
+  TP=14  FP=0  FN=1  RD=25
+  Mean latency  : 216.4s
+  Median latency: 90.0s
+  Grace period  : 10 min
+
+
+Per-anomaly-type breakdown (recall & latency):
+  Type                TP    FN    Recall    Mean Lat (s)    Median Lat (s)
+  ------------------------------------------------------------------------
+  gradual_leak           2     1     0.667           960.0           960.0
+  sensor_dropout         3     0     1.000            90.0            90.0
+  sensor_flatline        3     0     1.000             0.0             0.0
+  stuck_valve            3     0     1.000           220.0           180.0
+  sudden_leak            3     0     1.000            60.0            60.0
+
+False positives by tier:
+  (none)
+
+Redundant detections (same label, multiple fires): 25

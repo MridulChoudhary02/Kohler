@@ -56,14 +56,15 @@ from detection.baseline import BaselineProfile
 from detection.state import FixtureDetectionState
 
 # ── Config constants (mirrored; keep in sync with app/core/config.py) ─────────
-EWMA_LAMBDA           = 0.2
-UCL_L_FACTOR          = 3.0
-W1, W2, W3            = 0.40, 0.35, 0.25
-CONFIDENCE_LOG_ONLY   = 0.50
-CONFIDENCE_ESCALATE   = 0.80
-POST_FLUSH_GRACE_S    = 60
-SENSOR_DROPOUT_GAP_S  = 120
-CONFIRMATION_WINDOWS  = {          # tier → seconds
+EWMA_LAMBDA                 = 0.2
+UCL_L_FACTOR                = 3.0
+W1, W2, W3                  = 0.40, 0.35, 0.25
+CONFIDENCE_LOG_ONLY         = 0.50
+CONFIDENCE_ESCALATE         = 0.80
+POST_FLUSH_GRACE_S          = 60
+SENSOR_DROPOUT_GAP_S        = 120
+DEBOUNCE_BELOW_UCL_READINGS = 4    # N=4 consecutive readings (2 min) at/below UCL to re-arm suppression
+CONFIRMATION_WINDOWS        = {    # tier → seconds
     "Tier 1": 3  * 60,
     "Tier 2": 5  * 60,
     "Tier 3": 7  * 60,
@@ -258,8 +259,12 @@ class DetectionEngine:
         ucl = bp.ucl
         if state.ewma <= ucl:
             state.candidate_start_ts = None
-            state.suppress_until_below_ucl = False
+            state.consecutive_below_ucl_readings += 1
+            if state.consecutive_below_ucl_readings >= DEBOUNCE_BELOW_UCL_READINGS:
+                state.suppress_until_below_ucl = False
             return events
+
+        state.consecutive_below_ucl_readings = 0
 
         if state.suppress_until_below_ucl:
             return events   # already emitted for this breach episode
