@@ -420,3 +420,36 @@ validation-only pass.
 **Rationale / deviations from PRD:** Followed user instruction verbatim to prepare Phase 2 validation commit and push to remote.
 
 ---
+
+## [2026-09-15 21:42] — Phase 2: Merge phase-2-validation into main and cleanup branch
+
+**Trigger:** User instruction (merge phase-2-validation into main with --no-ff and cleanup branch)
+
+**Prompt/instruction used:** 1. Check out `main` and pull latest.
+2. Merge `phase-2-validation` into `main` with --no-ff so the merge is
+   traceable as a distinct commit:
+
+   git checkout main
+   git pull origin main
+   git merge --no-ff phase-2-validation -m "Merge Phase 2: Detection Engine Core (validated P=1.000, R=0.933)"
+
+3. Push main: git push origin main
+
+4. Confirm no merge conflicts occurred. Run the test suite once more on
+   main to confirm the merge didn't break anything:
+   cd backend && python -m pytest detection/tests/ -v
+
+5. Delete the now-merged local and remote branch:
+   git branch -d phase-2-validation
+   git push origin --delete phase-2-validation
+
+6. Report: merge commit hash, test results on main, and confirm main
+   is now the sole branch (git branch -a).
+
+**Action taken:** Checked out `main`, pulled origin, merged `phase-2-validation` with `--no-ff` and pushed to `main`. Ran pytest unit test suite on `main` to verify complete test pass. Cleaned up local and remote `phase-2-validation` branches.
+
+**Files touched:** `PROMPT_LOG.md`, git merge/branch tracking
+
+**Rationale / deviations from PRD:** Followed user instruction verbatim to complete Phase 2 merge and branch cleanup.
+
+---
