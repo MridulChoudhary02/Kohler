@@ -453,3 +453,112 @@ validation-only pass.
 **Rationale / deviations from PRD:** Followed user instruction verbatim to complete Phase 2 merge and branch cleanup.
 
 ---
+
+## [2026-09-15 21:50] — Phase 3: Sensor Health Scoring + Hygiene Threshold Prediction
+
+**Trigger:** User prompt instruction (Phase 3 implementation)
+
+**Prompt/instruction used:** Create and check out a new branch `phase-3-sensor-hygiene` from `main`.
+
+Implement PRD Section 8 (Hygiene Threshold Prediction) and Section 9
+(Sensor Health Scoring), following the same architecture pattern as
+detection/ (Phase 2): a stateful per-entity tracker + an engine module
+that runs off the same telemetry stream.
+
+1. Sensor Health Scoring (Section 9):
+   - Per sensor_id, track over a rolling window: missing-data rate
+     (expected reading interval vs actual gaps), flatline flag,
+     out-of-range value rate (physically impossible flow/occupancy),
+     drift flag (baseline shifting faster than physically plausible).
+   - sensor_health_score = 1 - (0.3*missing_rate + 0.3*flatline_flag
+     + 0.2*out_of_range_rate + 0.2*drift_flag)
+   - If score < 0.6: any detection event from that sensor must be
+     downgraded to "logged only" (never "dispatched"), and a separate
+     sensor_maintenance ticket-type event is emitted instead.
+   - Wire this into detection/engine.py's dispatch decision — do not
+     duplicate the confidence-scoring logic, gate on top of it.
+
+2. Hygiene Threshold Prediction (Section 8):
+   - Per fixture/zone, track uses_since_clean and a sliding-window
+     recent_use_rate (uses in last 60 min / 60).
+   - predicted_breach_time = now + (uses_remaining / recent_use_rate)
+   - If predicted_breach_time - now <= lead_time_target (30 min
+     default, shorter for Tier 1 — use the Section 5 tier table),
+     emit a predictive_hygiene ticket event.
+   - Must recompute on the sliding window so it reacts correctly to
+     the existing burst-mode traffic spikes already in the simulator
+     (simulator/burst.py) — do not build a new traffic generator.
+
+3. Put new code in backend/detection/sensor_health.py and
+   backend/detection/hygiene.py, following the existing module style
+   (dataclass state + pure functions, matching baseline.py/state.py).
+
+4. Add unit tests under backend/detection/tests/ mirroring the Phase 2
+   pattern:
+   - test_sensor_fault_downgrades_to_maintenance_ticket (inject a
+     flatlining/noisy sensor, assert leak events from it are
+     logged-only + a sensor_maintenance ticket fires, not a leak
+     ticket)
+   - test_hygiene_prediction_fires_before_threshold (simulate a
+     traffic burst, assert predictive ticket fires with correct lead
+     time before the static threshold would have been crossed)
+
+5. Append a PROMPT_LOG.md entry per the existing protocol covering
+   design decisions (weight rationale, any deviations).
+
+Do not touch detection/engine.py's core EWMA/confidence logic from
+Phase 2 — only add the sensor-health gate and the hygiene module.
+Do not commit yet — stop after implementation and report what was
+built, file by file.
+
+**Action taken:** Implemented `backend/detection/sensor_health.py` (PRD §9) and `backend/detection/hygiene.py` (PRD §8). Integrated `SensorHealthTracker` and `HygieneTracker` into `DetectionEngine` in `backend/detection/engine.py`. Gated leak event dispatches on `sensor_health_score >= 0.60`. Created unit tests `test_sensor_health.py` and `test_hygiene.py` under `backend/detection/tests/`. Evaluated all 4 unit tests (100% pass) and full 3-day test set runner (P=1.000, R=0.933).
+
+**Files touched:** `backend/detection/sensor_health.py`, `backend/detection/hygiene.py`, `backend/detection/engine.py`, `backend/detection/runner.py`, `backend/detection/tests/test_sensor_health.py`, `backend/detection/tests/test_hygiene.py`, `PROMPT_LOG.md`
+
+**Rationale / deviations from PRD:**
+- Sensor health weights set exactly as specified in PRD Section 9: `0.30 * missing_rate + 0.30 * flatline_flag + 0.20 * out_of_range_rate + 0.20 * drift_flag`.
+- Degraded threshold set to 0.60. Below 0.60, leak events are downgraded to `status = "logged"` and a `sensor_fault` / `sensor_maintenance` ticket event is dispatched.
+- Hygiene lead time targets set per Section 5 tier table: Tier 1 = 15 min, Tier 2-4 = 30 min. Uses thresholds set to 20/30/40/60 for Tiers 1-4.
+- Sliding window `recent_use_rate` calculates uses per minute using observed window span (up to 60 min) so forecasting is accurate during traffic bursts.
+
+---
+
+## [2026-09-15 21:53] — Phase 3: Review runner.py diff, stage, commit and push phase-3-sensor-hygiene branch
+
+**Trigger:** User instruction (review runner.py diff, commit and push phase-3-sensor-hygiene branch)
+
+**Prompt/instruction used:** On branch `phase-3-sensor-hygiene`:
+
+1. Show me the diff of backend/detection/runner.py only (the change
+   that wasn't explicitly requested) — one-line explanation of what
+   it does.
+
+2. If that diff is purely additive reporting (new output lines for
+   hygiene/sensor-maintenance tickets) and doesn't change how leak
+   events are scored against the labeled test set, proceed:
+
+   git add -A
+   git commit -m "Phase 3: Sensor Health Scoring + Hygiene Prediction
+
+   Sensor health score (PRD §9) gates leak dispatch at 0.60 threshold;
+   degraded sensors downgrade to logged + emit sensor_maintenance
+   ticket instead of false leak ticket. Hygiene breach prediction
+   (PRD §8) fires predictive_hygiene tickets on sliding 60-min use
+   rate, lead time 15min (Tier 1) / 30min (Tier 2-4).
+
+   4/4 unit tests passing. Leak precision/recall unchanged at
+   P=1.000, R=0.933 on combined 3-day test set. 16 predictive hygiene
+   tickets dispatched on test set."
+
+3. Push: git push -u origin phase-3-sensor-hygiene
+
+4. Do NOT merge to main yet. Report the commit hash and the
+   runner.py diff from step 1.
+
+**Action taken:** Inspected `git diff backend/detection/runner.py` to confirm changes were purely additive reporting for hygiene events. Staged all changes (`git add -A`), committed with the exact requested commit message, and pushed `phase-3-sensor-hygiene` to remote origin. Did not merge to `main`.
+
+**Files touched:** `PROMPT_LOG.md`, git commit/push tracking
+
+**Rationale / deviations from PRD:** Followed user instruction verbatim to commit and push Phase 3 implementation.
+
+---
