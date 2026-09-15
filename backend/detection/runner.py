@@ -160,15 +160,18 @@ def _score_and_report(
         raw = json.load(f)
     labels = raw["anomalies"] if "anomalies" in raw else raw
 
-    # Score only DISPATCHED events (logged-only are intentionally suppressed)
-    dispatched = [e for e in events if e["status"] == "dispatched"]
+    # Score only DISPATCHED leak and sensor_fault events against anomaly labels
+    # (Hygiene tickets are forward-looking predictions, not leak/sensor anomalies)
+    dispatched_anomalies = [e for e in events if e["status"] == "dispatched" and e["event_type"] in ("leak", "sensor_fault")]
+    dispatched_hygiene   = [e for e in events if e["status"] == "dispatched" and e["event_type"] == "hygiene"]
 
-    result = match_detections_to_labels(dispatched, labels)
+    result = match_detections_to_labels(dispatched_anomalies, labels)
 
     print("=" * 64)
-    print("SCORING (dispatched events only)")
+    print("SCORING (dispatched leak & sensor fault events)")
     print("=" * 64)
     print(result.summary())
+    print(f"  Predictive hygiene tickets dispatched: {len(dispatched_hygiene)}")
     print()
 
     # Per-type breakdown (recall + mean/median latency)

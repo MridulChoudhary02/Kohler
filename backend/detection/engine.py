@@ -54,6 +54,8 @@ from typing import Any, Optional
 
 from detection.baseline import BaselineProfile
 from detection.state import FixtureDetectionState
+from detection.sensor_health import SensorHealthTracker
+from detection.hygiene import HygieneTracker
 
 # ── Config constants (mirrored; keep in sync with app/core/config.py) ─────────
 EWMA_LAMBDA                 = 0.2
@@ -83,7 +85,7 @@ def _make_event(
     fixture_id:     str,
     sensor_id:      str,
     zone_tier:      str,
-    event_type:     str,         # "leak" | "sensor_fault"
+    event_type:     str,         # "leak" | "sensor_fault" | "hygiene"
     detected_at:    datetime,
     candidate_start: Optional[datetime],
     confidence:     float,
@@ -125,17 +127,24 @@ class DetectionEngine:
         self._baselines: dict[str, BaselineProfile] = baseline_profiles
         self._fixture_meta: dict[str, dict] = {f["fixture_id"]: f for f in fixture_info}
 
-        # Initialise per-fixture state
+        # Initialise per-fixture state, sensor health trackers, and hygiene trackers
         self._states: dict[str, FixtureDetectionState] = {}
+        self._sensor_health: dict[str, SensorHealthTracker] = {}
+        self._hygiene: dict[str, HygieneTracker] = {}
+
         for fid, meta in self._fixture_meta.items():
-            bp = baseline_profiles.get(fid)
-            state = FixtureDetectionState(
+            bp   = baseline_profiles.get(fid)
+            sid  = meta.get("sensor_id", fid)
+            tier = meta.get("zone_tier", "Tier 4")
+
+            self._states[fid] = FixtureDetectionState(
                 fixture_id   = fid,
-                zone_tier    = meta.get("zone_tier", "Tier 4"),
+                zone_tier    = tier,
                 fixture_type = meta.get("fixture_type", "faucet"),
                 ewma         = bp.initial_ewma if bp else 0.0,
             )
-            self._states[fid] = state
+            self._sensor_health[sid] = SensorHealthTracker(sensor_id=sid, fixture_id=fid, zone_tier=tier)
+            self._hygiene[fid]       = HygieneTracker(fixture_id=fid, zone_tier=tier)
 
     # ─────────────────────────────────────────────────────────────────────────
     # PUBLIC API
@@ -163,6 +172,21 @@ class DetectionEngine:
         flush_evt      = int(reading.get("flush_event", 0))
         diag_status    = reading.get("diagnostic_status", "ok")
         sensor_id      = reading.get("sensor_id", "")
+
+        # ── Sensor Health Scoring & Maintenance Ticket (§9) ───────────────────
+        health_tracker = self._sensor_health.get(sensor_id)
+        health_score   = 1.0
+        if health_tracker:
+            health_score, maint_event = health_tracker.process_reading(reading)
+            if maint_event:
+                events.append(maint_event)
+
+        # ── Hygiene Threshold Prediction (§8) ─────────────────────────────────
+        hygiene_tracker = self._hygiene.get(fid)
+        if hygiene_tracker:
+            hyg_event = hygiene_tracker.process_reading(reading, warmup_complete=bp.warmup_complete)
+            if hyg_event:
+                events.append(hyg_event)
 
         # ── 0. Dropout check: gap vs. previous reading ────────────────────────
         if state.last_reading_ts is not None:
@@ -213,7 +237,7 @@ class DetectionEngine:
                     if not state.stuck_valve_dispatched:
                         # Flow failed to return to baseline after flush within learned window
                         confidence = 0.95   # high-confidence leak event (§7.4 fast path)
-                        status     = "dispatched" if bp.warmup_complete else "logged"
+                        status     = "dispatched" if (bp.warmup_complete and health_score >= 0.60) else "logged"
                         ev = _make_event(
                             fixture_id      = fid,
                             sensor_id       = sensor_id,
@@ -290,7 +314,7 @@ class DetectionEngine:
             state.candidate_start_ts = None
             return events
 
-        if confidence >= CONFIDENCE_ESCALATE and bp.warmup_complete:
+        if confidence >= CONFIDENCE_ESCALATE and bp.warmup_complete and health_score >= 0.60:
             status = "dispatched"
         else:
             status = "logged"
