@@ -236,3 +236,74 @@ new cases fail ONLY if the occupancy cross-check works correctly.
   simulator/output/test_set/* (regenerated)
 
 ---
+
+## [2026-09-15 19:26] — Phase 2: warm-up resolution + detection engine
+
+**Trigger:** User instruction (Phase 2 start, user-approved plan)
+
+**Decision: pre-warm period**
+Generate 7 days of clean telemetry (2026-09-08 to 2026-09-15, seed=9999) with
+no anomalies, bursts, or hard-negatives. Run baseline learning against this
+period so warmup_complete=True by the start of the 3-day labeled test window.
+Seed 9999 chosen to be orthogonal to test set seeds (42/1042/2042).
+
+**Decision: baseline learning algorithm**
+Welford online algorithm for numerically stable mean/variance from idle readings
+(occupancy_state=0, diagnostic_status="ok", flush_event=0). EWMA initialised to
+learned mean. UCL = mean + L*std (L = UCL_L_FACTOR = 3.0 from config).
+warmup_complete set True when elapsed span of processed readings >= BASELINE_WARMUP_DAYS (7).
+
+**Decision: detection signals**
+Signal 1 (EWMA/UCL): idle EWMA > UCL, sustained for confirmation_window[tier].
+  → Update only when occupancy=0, flush_event=0, diagnostic_status="ok", NOT in post-flush window.
+  → Candidate timer resets when EWMA drops below UCL or occupancy=1 interrupts.
+Signal 2 (occupancy cross-check): occupancy=1 → reset candidate timer, skip EWMA update.
+  → w2 = 0.35 confidence boost applied when dispatching (occupancy=0 confirmed).
+Signal 3 (post-flush): after flush_event=1, suppress EWMA updates and candidate starts
+  for POST_FLUSH_GRACE_S = 60 seconds. w3 = 0.25 confidence boost applied when NOT in post-flush.
+Sensor fault (flatline): diagnostic_status="flatline" → emit sensor_fault immediately, no confirm window.
+Sensor fault (dropout): gap in readings > SENSOR_DROPOUT_GAP_S = 120s → emit sensor_fault.
+  Detection_at = last_seen_ts + SENSOR_DROPOUT_GAP_S.
+
+**Decision: confidence formula**
+confidence = W1 × dev_norm + W2 × 1.0 + W3 × 1.0  (when dispatching from normal idle path)
+  dev_norm = clamp((ewma - ucl) / max(ucl - mean, 0.001), 0, 1)
+  W1=0.40, W2=0.35, W3=0.25 (from config).
+Minimum confidence when EWMA just breaches UCL: 0.0 + 0.35 + 0.25 = 0.60 ("logged").
+Dispatch threshold (0.80) requires dev_norm >= 0.50, i.e., EWMA >= 1.5*UCL - 0.5*mean.
+
+**New config constants added:**
+  POST_FLUSH_GRACE_S = 60    (one reading interval + margin)
+  SENSOR_DROPOUT_GAP_S = 120 (4 × reading_interval = definitive gap)
+
+**Decision: warm-up suppression test isolation**
+A separate single-fixture test (detection/tests/test_warmup_suppression.py) with
+warmup_complete=False. High-confidence sudden_leak injected. Assert: 0 dispatched
+events. This is NEVER scored against the main labeled test set.
+
+**Files created:** simulator/generate_prewarm.py, detection/__init__.py,
+  detection/baseline.py, detection/state.py, detection/engine.py,
+  detection/runner.py, detection/tests/test_warmup_suppression.py
+
+---
+
+## [2026-09-15 19:50] — Correction & Refinement: Section 7.4 Stuck-Valve Fast-Path + Validation Plan
+
+**Trigger:** User prompt instruction (correction before Part C execution)
+
+**Correction: Section 7.4 Stuck-Valve Signal**
+- **Original conflation:** The previous design conflated the PRD's Section 7.4 fast-path rule with Section 7.5's `w3` confidence weight (treating post-flush match as a passive weight boost).
+- **Corrected implementation:** Section 7.4 is now implemented as an explicit, separate fast-path check. Following any `flush_event = 1`, flow decay is monitored against that fixture's learned `mean_flush_duration_s + 2 * std_flush_duration_s` (derived online during baseline learning in `baseline.py`, not a static 60s constant). If flow fails to return to baseline (`mean_idle_flow`) within this learned window, a high-confidence (`confidence = 0.95`) leak event is raised immediately — bypassing the normal EWMA confirmation window timer entirely.
+- **Signal 1 interaction:** `POST_FLUSH_GRACE_S = 60s` suppression remains active for Signal 1's normal idle EWMA path so normal flushes never trigger EWMA candidate timers.
+
+**Logged Deviation & Consequence: `w2`-baked-into-gating**
+- Confirmed logged: In `engine.py`, because Signal 1 EWMA candidates are only evaluated when `occupancy_state == 0` and `not in_post_flush`, when a candidate reaches its confirmation window, both `occupancy_state == 0` and `in_post_flush == False` are satisfied (`w2 = 0.35` and `w3 = 0.25` boost).
+- **Consequence:** Any EWMA candidate that sustains flow above UCL for its confirmation window receives a minimum confidence score of `0.40 * 0.0 + 0.35 * 1.0 + 0.25 * 1.0 = 0.60`. It will always be at least "logged" (confidence ≥ 0.50), and will be "dispatched" if `dev_norm` reaches ≥ 0.50 (bringing confidence to ≥ 0.80).
+
+**Tradeoff Note: Candidate Reset on Occupancy**
+- Added explicit code comment in `engine.py` under Signal 2: in high-traffic zones where `occupancy_state == 1` continuously, candidate timers will be repeatedly reset, creating a potential recall risk in non-stop occupied areas (noted design tradeoff for future refinement).
+
+**Validation Plan Confirmation:**
+- Confirmed that ordinary-flush no-false-positive validation (`test_ordinary_flushes.py`) is preserved in the execution plan before Phase 2 completion.
+
+**Files touched:** `backend/detection/baseline.py`, `backend/detection/state.py`, `backend/detection/engine.py`, `backend/detection/runner.py`, `backend/detection/tests/test_ordinary_flushes.py`, `PROMPT_LOG.md`

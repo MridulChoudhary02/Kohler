@@ -211,10 +211,18 @@ class FixtureSimulator:
         rate_per_second = (base_rate * base_multiplier * burst_mult) / 3600.0
 
         # --- Start a new use event stochastically ---
-        if self._use_end_ts is None or ts >= self._use_end_ts:
-            if ts >= (self._post_flush_end_ts or ts):   # don't start during post-flush decay
-                # Poisson: P(event in this interval) = rate × interval
-                if self.rng.random() < rate_per_second * READING_INTERVAL_S:
+        if self._use_end_ts is None or ts >= (self._post_flush_end_ts or self._use_end_ts):
+            # Poisson: P(event in this interval) = rate × interval
+            if self.rng.random() < rate_per_second * READING_INTERVAL_S:
+                if self.profile.generates_flush_event:
+                    # Flush fixtures: 1 tick in_use (occupancy=1), 1 tick in_flush (flush_event=1), 1 tick post_flush decay
+                    self._use_end_ts        = ts + timedelta(seconds=READING_INTERVAL_S)
+                    self._flush_end_ts      = self._use_end_ts + timedelta(seconds=READING_INTERVAL_S)
+                    self._post_flush_end_ts = self._flush_end_ts + timedelta(seconds=READING_INTERVAL_S)
+                    flush_dur_min           = READING_INTERVAL_S / 60.0
+                    flush_vol = max(1.0, self.rng.gauss(self.profile.flush_volume_mean_l, self.profile.flush_volume_std_l))
+                    self._flush_volume_l    = flush_vol / flush_dur_min
+                else:
                     duration_s = max(
                         2.0,
                         self.rng.gauss(
@@ -222,30 +230,9 @@ class FixtureSimulator:
                             self.profile.use_duration_std_s,
                         ),
                     )
-                    self._use_end_ts = ts + timedelta(seconds=duration_s)
-                    self._occupancy  = 1 if self.profile.has_occupancy_signal else 0
-                    # Schedule flush at end of use (for flush fixtures)
-                    if self.profile.generates_flush_event:
-                        flush_dur = max(
-                            3.0,
-                            self.rng.gauss(
-                                self.profile.flush_duration_mean_s,
-                                self.profile.flush_duration_std_s,
-                            ),
-                        )
-                        self._flush_end_ts = self._use_end_ts + timedelta(seconds=flush_dur)
-                        flush_vol = max(
-                            1.0,
-                            self.rng.gauss(
-                                self.profile.flush_volume_mean_l,
-                                self.profile.flush_volume_std_l,
-                            ),
-                        )
-                        # L/min during flush
-                        self._flush_volume_l = flush_vol / (flush_dur / 60.0)
-                        self._post_flush_end_ts = self._flush_end_ts + timedelta(
-                            seconds=self.profile.post_flush_decay_s
-                        )
+                    self._use_end_ts        = ts + timedelta(seconds=duration_s)
+                    self._flush_end_ts      = None
+                    self._post_flush_end_ts = None
 
         # --- Determine current state ---
         in_use     = self._use_end_ts is not None and ts < self._use_end_ts
@@ -273,14 +260,9 @@ class FixtureSimulator:
             flush_event = 1
             flow = max(0.0, self.rng.gauss(self._flush_volume_l, 0.2))
         elif post_flush:
-            # Exponential decay back to idle — uses fraction of remaining decay time
             occupancy = 0
             flush_event = 0
-            decay_total = self.profile.post_flush_decay_s
-            elapsed = (ts - self._flush_end_ts).total_seconds()
-            decay_frac = max(0.0, 1.0 - elapsed / decay_total)
-            residual = self._flush_volume_l * decay_frac * 0.15  # small residual
-            flow = max(0.0, residual + self.rng.gauss(0, self.profile.idle_flow_std))
+            flow = max(0.0, self.rng.gauss(0.05, 0.02))  # lingering post-flush flow decaying to 0
         else:
             # Idle
             occupancy = 0

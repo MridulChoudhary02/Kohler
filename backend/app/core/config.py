@@ -42,12 +42,21 @@ class Settings(BaseSettings):
     # Grace period for precision/recall matching (scoring.py, Phase 2).
     # A detection_event counts as a TP if detected_at ∈
     #   [label.start_timestamp, label.end_timestamp + grace].
-    # Set to 10 min = worst-case Tier 4 confirmation window: a detection engine
-    # cannot flag a leak before a full confirmation window has elapsed (PRD §7.2),
-    # so a correct detection fired at anomaly_start + 10 min is still a TP.
-    # This is conservative — covers all tiers without over-generous matching.
+    # Set to 10 min = worst-case Tier 4 confirmation window.
     DETECTION_GRACE_PERIOD_MINUTES: int = 10
 
+    # Seconds after a flush_event=1 reading during which the idle-flow EWMA
+    # is NOT updated and candidate timers are NOT started.
+    # Rationale: post-flush pressure transients (typically 3–4 s) corrupt the
+    # EWMA if included. 60 s = 2 reading intervals; covers the longest
+    # post_flush_decay_s in profiles.py (flush_valve = 4 s) with large margin.
+    POST_FLUSH_GRACE_S: int = 60
+
+    # Gap in per-fixture readings (seconds) that constitutes a sensor dropout.
+    # 120 s = 4 × READING_INTERVAL_S (30 s). A single missed reading (60 s gap)
+    # could be transient network jitter; four consecutive missed readings (120 s)
+    # is definitively anomalous.
+    SENSOR_DROPOUT_GAP_S: int = 120
 
     # ── Section 7.5 — Confidence scoring weights ──────────────────────────────
     # confidence = w1×(EWMA deviation, normalised)
