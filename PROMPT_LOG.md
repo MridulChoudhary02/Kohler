@@ -593,3 +593,49 @@ built, file by file.
 **Rationale / deviations from PRD:** Followed user instruction verbatim to complete Phase 3 merge and branch cleanup.
 
 ---
+
+## [2026-09-15 22:00] — Phase 4: Live Telemetry Ingestion API
+
+**Trigger:** User prompt instruction (Phase 4 implementation)
+
+**Prompt/instruction used:** Create and check out a new branch `phase-4-ingestion-api` from `main`.
+
+Goal: wire telemetry ingestion through a live FastAPI endpoint into
+Postgres, reusing the Phase 2/3 DetectionEngine rather than
+reimplementing detection logic.
+
+1. Create backend/app/services/detection_service.py
+2. Create backend/app/api/telemetry.py
+3. Register the router in main.py
+4. Write backend/scripts/replay_simulator_to_api.py
+5. Append a PROMPT_LOG.md entry covering design decisions (in-memory
+   engine statefulness across requests, baseline source fallback
+   logic, why tickets are deferred to Phase 5).
+
+**Action taken:**
+1. Created and checked out new git branch `phase-4-ingestion-api` from `main`.
+2. Created `backend/app/services/detection_service.py`: Encapsulated `DetectionEngine` (+ `SensorHealthTracker` + `HygieneTracker`) as an app-level singleton with per-fixture state preserved in memory for the life of the process. Handled timestamp parsing for `str` and `datetime` types.
+3. Created `backend/app/api/telemetry.py`: Endpoint `POST /api/v1/telemetry/ingest` accepting single or batch telemetry readings. Persists `TelemetryReading` rows, evaluates stateful `DetectionService.process_reading()`, persists resulting `DetectionEvent` rows (with evidence values for leak waste, hygiene breach time, and sensor health), and upserts `HygieneCounter` rows.
+4. Updated `backend/app/main.py`: Added lifespan handler initializing `DetectionService` on startup using async DB session, and registered `telemetry.router` under `/api/v1`.
+5. Wrote `backend/scripts/replay_simulator_to_api.py`: Replay harness reading simulated telemetry JSONL chronologically, resolving missing `sensor_id` via seed mapping, and POSTing batch requests to the running FastAPI server via `httpx`.
+6. Created `backend/detection/tests/test_ingestion_api.py`: Integration test using FastAPI `TestClient` and offline database dependency override. Validated 7/7 unit tests passing.
+
+**Design Decisions & Rationale:**
+- **In-memory Engine Statefulness Across Requests:** The `DetectionEngine` relies on continuous state tracking (idle EWMA, candidate confirmation timers, sliding 60-min usage window for hygiene prediction, and rolling window error tracking for sensor health). Maintaining a singleton service with per-fixture state in memory for the process life preserves identical statefulness to the batch runner, allowing live HTTP requests to drive real-time detection without re-querying raw time-series history on every request.
+- **Baseline Source Fallback Logic:** During FastAPI startup lifespan, `DetectionService` attempts to load learned `BaselineProfile` records from PostgreSQL (`baseline_profiles` joined with `fixtures` and `zones`). If DB rows are unpopulated (e.g. before initial pre-warm migration), it falls back to loading `simulator/output/prewarm/baseline_profiles.json`. If neither exist, it initializes un-warmed defaults (`warmup_complete=False`).
+- **Ticket Deferral to Phase 5:** Ticket row persistence, SLA policy assignment, technician dispatch, and priority score computation (PRD Section 10) are explicitly deferred to Phase 5 per the PRD incremental delivery plan. Phase 4 scope is strictly telemetry ingestion, stateful engine evaluation, and raw detection event & hygiene counter persistence.
+
+**Files touched:**
+- [NEW] `backend/app/services/detection_service.py`
+- [NEW] `backend/app/api/telemetry.py`
+- [NEW] `backend/app/api/__init__.py`
+- [MODIFY] `backend/app/main.py`
+- [NEW] `backend/scripts/replay_simulator_to_api.py`
+- [NEW] `backend/detection/tests/test_ingestion_api.py`
+- [MODIFY] `backend/detection/engine.py`
+- [MODIFY] `backend/detection/sensor_health.py`
+- [MODIFY] `backend/detection/hygiene.py`
+- [MODIFY] `PROMPT_LOG.md`
+
+
+---

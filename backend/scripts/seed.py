@@ -12,6 +12,9 @@ import asyncio
 import uuid
 from datetime import datetime, timezone
 
+import json
+from pathlib import Path
+
 import asyncpg
 from scripts.seed_data import SEED
 
@@ -83,17 +86,42 @@ async def run_seed():
             # 7. Baseline Profiles
             print("  → baseline_profiles")
             now = datetime.now(timezone.utc)
+            prewarm_path = Path(__file__).resolve().parents[1] / "simulator" / "output" / "prewarm" / "baseline_profiles.json"
+            prewarm_data = {}
+            if prewarm_path.exists():
+                try:
+                    with open(prewarm_path) as pf:
+                        prewarm_data = json.load(pf).get("profiles", {})
+                    print(f"     (Loaded pre-warmed baselines from {prewarm_path.name})")
+                except Exception as pe:
+                    print(f"     (Warning: could not parse prewarm baselines: {pe})")
+
             for bp in SEED["baseline_profiles"]:
+                fid = bp["fixture_id"]
+                pw = prewarm_data.get(fid, {})
+                mean_off = pw.get("mean_idle_flow", bp["mean_off_flow"])
+                std_off = pw.get("std_idle_flow", bp["std_off_flow"])
+                mean_dur = pw.get("mean_flush_duration_s", bp["mean_flush_duration_s"])
+                warmup_comp = pw.get("warmup_complete", bp["warmup_complete"])
+                w_start_str = pw.get("warmup_started_at", bp["warmup_started_at"])
+
                 last_updated = datetime.fromisoformat(bp["last_updated"].replace("Z", "+00:00"))
-                warmup_started = datetime.fromisoformat(bp["warmup_started_at"].replace("Z", "+00:00"))
+                warmup_started = datetime.fromisoformat(w_start_str.replace("Z", "+00:00")) if isinstance(w_start_str, str) else now
+
                 await conn.execute(
                     "INSERT INTO baseline_profiles "
                     "(fixture_id, mean_off_flow, std_off_flow, mean_flush_volume, mean_flush_duration_s, "
                     "last_updated, warmup_complete, warmup_started_at) "
-                    "VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT DO NOTHING",
-                    bp["fixture_id"], bp["mean_off_flow"], bp["std_off_flow"],
-                    bp["mean_flush_volume"], bp["mean_flush_duration_s"],
-                    last_updated, bp["warmup_complete"], warmup_started
+                    "VALUES ($1, $2, $3, $4, $5, $6, $7, $8) "
+                    "ON CONFLICT (fixture_id) DO UPDATE SET "
+                    "mean_off_flow = EXCLUDED.mean_off_flow, "
+                    "std_off_flow = EXCLUDED.std_off_flow, "
+                    "mean_flush_duration_s = EXCLUDED.mean_flush_duration_s, "
+                    "warmup_complete = EXCLUDED.warmup_complete, "
+                    "warmup_started_at = EXCLUDED.warmup_started_at",
+                    fid, mean_off, std_off,
+                    bp["mean_flush_volume"], mean_dur,
+                    last_updated, warmup_comp, warmup_started
                 )
 
 
