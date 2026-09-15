@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-15T13:36:10.783493+00:00",
+  "generated_at": "2026-09-15T13:48:49.622823+00:00",
   "simulation_date": "2026-09-15",
   "hard_negative_events": [
     {
@@ -48,6 +48,38 @@
         "burst_id": "burst-zone-ward-0730"
       },
       "notes": "Hard negative \u2014 legitimate traffic burst on zone-ward: 120.0 min of elevated usage. Uses hygiene counter but is normal. Should NOT trigger leak alert, only hygiene prediction.",
+      "expected_detection": false
+    },
+    {
+      "neg_id": "neg-fix-icu-005-long_handwash-1500",
+      "neg_type": "long_handwash",
+      "fixture_id": "fix-icu-005",
+      "sensor_id": "sen-icu-005",
+      "start_timestamp": "2026-09-15T15:00:00+00:00",
+      "end_timestamp": "2026-09-15T15:08:00+00:00",
+      "parameters": {
+        "long_duration_s": 480.0,
+        "blip_flow_lpm": 0.3,
+        "blip_duration_s": 60.0,
+        "burst_id": null
+      },
+      "notes": "Hard-neg (OCCUPANCY CROSS-CHECK, Tier 1): ICU patient bath, 480 s active flow, occupancy=1 throughout. Duration 8 min > Tier 1 confirmation window (3 min). No leak alert expected.",
+      "expected_detection": false
+    },
+    {
+      "neg_id": "neg-fix-lob-003-long_handwash-1630",
+      "neg_type": "long_handwash",
+      "fixture_id": "fix-lob-003",
+      "sensor_id": "sen-lob-003",
+      "start_timestamp": "2026-09-15T16:30:00+00:00",
+      "end_timestamp": "2026-09-15T16:42:00+00:00",
+      "parameters": {
+        "long_duration_s": 720.0,
+        "blip_flow_lpm": 0.3,
+        "blip_duration_s": 60.0,
+        "burst_id": null
+      },
+      "notes": "Hard-neg (OCCUPANCY CROSS-CHECK, Tier 4): Lobby cleaner tap running, occupancy=1 for 720 s > Tier 4 confirmation window (10 min). No leak alert expected.",
       "expected_detection": false
     }
   ]

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-15T13:36:11.208312+00:00",
+  "generated_at": "2026-09-15T13:48:50.079748+00:00",
   "simulation_date": "2026-09-16",
   "hard_negative_events": [
     {
@@ -48,6 +48,22 @@
         "burst_id": "burst-zone-icu-0600"
       },
       "notes": "Hard negative \u2014 legitimate traffic burst on zone-icu: 120.0 min of elevated usage. Uses hygiene counter but is normal. Should NOT trigger leak alert, only hygiene prediction.",
+      "expected_detection": false
+    },
+    {
+      "neg_id": "neg-fix-ward-004-long_handwash-1030",
+      "neg_type": "long_handwash",
+      "fixture_id": "fix-ward-004",
+      "sensor_id": "sen-ward-004",
+      "start_timestamp": "2026-09-16T10:30:00+00:00",
+      "end_timestamp": "2026-09-16T10:38:00+00:00",
+      "parameters": {
+        "long_duration_s": 480.0,
+        "blip_flow_lpm": 0.3,
+        "blip_duration_s": 60.0,
+        "burst_id": null
+      },
+      "notes": "Hard-neg (OCCUPANCY CROSS-CHECK, Tier 2): Ward patient shower, 480 s active flow, occupancy=1 throughout. Duration 8 min > Tier 2 confirmation window (5 min). No leak alert expected.",
       "expected_detection": false
     }
   ]

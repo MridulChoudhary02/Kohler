@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-09-15T13:36:11.626496+00:00",
+  "generated_at": "2026-09-15T13:48:50.550092+00:00",
   "base_seed": 42,
   "total_readings": 172530,
   "total_anomaly_labels": 15,
   "total_burst_events": 3,
-  "total_hard_negatives": 9,
+  "total_hard_negatives": 13,
   "days": [
     {
       "day": 1,
@@ -13,7 +13,7 @@
       "reading_count": 57510,
       "anomaly_count": 5,
       "burst_count": 1,
-      "hard_neg_count": 3
+      "hard_neg_count": 5
     },
     {
       "day": 2,
@@ -22,7 +22,7 @@
       "reading_count": 57510,
       "anomaly_count": 5,
       "burst_count": 1,
-      "hard_neg_count": 3
+      "hard_neg_count": 4
     },
     {
       "day": 3,
@@ -31,7 +31,7 @@
       "reading_count": 57510,
       "anomaly_count": 5,
       "burst_count": 1,
-      "hard_neg_count": 3
+      "hard_neg_count": 4
     }
   ],
   "anomaly_type_coverage": [

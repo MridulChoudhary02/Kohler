@@ -161,11 +161,40 @@ DAY1_HARD_NEGATIVES: list[HardNegativeSpec] = [
     # traffic_burst reference — Ward zone
     HardNegativeSpec(
         neg_type   = HardNegativeType.TRAFFIC_BURST,
-        fixture_id = "zone-ward",       # zone-level, no single fixture
+        fixture_id = "zone-ward",
         sensor_id  = "",
         start_ts   = _D1_BURST_WARD.start_ts,
         end_ts     = _D1_BURST_WARD.end_ts,
         burst_id   = _D1_BURST_WARD.burst_id,
+    ),
+    # ── NEW: long-occupancy / occupancy cross-check stress tests ─────────────────
+    # Tier 1 (ICU): confirm window = 3 min. Duration = 480 s (8 min) > 3 min.
+    # Patient bath in ICU with sensor attached. Occupancy=1 throughout.
+    # A correct engine must NOT fire a leak alert: Signal 1 (idle-flow EWMA)
+    # should stay quiet because flow is legitimate active-use flow, not idle flow.
+    HardNegativeSpec(
+        neg_type        = HardNegativeType.LONG_HANDWASH,
+        fixture_id      = "fix-icu-005",
+        sensor_id       = _sid("fix-icu-005"),
+        start_ts        = _ts(DAY1, 15,  0),
+        end_ts          = _ts(DAY1, 15,  8),
+        long_duration_s = 480.0,   # 8 min; Tier 1 confirm window = 3 min
+        notes = ("Hard-neg (OCCUPANCY CROSS-CHECK, Tier 1): ICU patient bath, "
+                 "480 s active flow, occupancy=1 throughout. Duration 8 min > "
+                 "Tier 1 confirmation window (3 min). No leak alert expected."),
+    ),
+    # Tier 4 (Lobby): confirm window = 10 min. Duration = 720 s (12 min) > 10 min.
+    # Cleaner running a tap while mopping. Occupancy=1 throughout.
+    HardNegativeSpec(
+        neg_type        = HardNegativeType.LONG_HANDWASH,
+        fixture_id      = "fix-lob-003",
+        sensor_id       = _sid("fix-lob-003"),
+        start_ts        = _ts(DAY1, 16, 30),
+        end_ts          = _ts(DAY1, 16, 42),
+        long_duration_s = 720.0,   # 12 min; Tier 4 confirm window = 10 min
+        notes = ("Hard-neg (OCCUPANCY CROSS-CHECK, Tier 4): Lobby cleaner "
+                 "tap running, occupancy=1 for 720 s > Tier 4 confirmation "
+                 "window (10 min). No leak alert expected."),
     ),
 ]
 
@@ -263,6 +292,20 @@ DAY2_HARD_NEGATIVES: list[HardNegativeSpec] = [
         end_ts     = _D2_BURST_ICU.end_ts,
         burst_id   = _D2_BURST_ICU.burst_id,
     ),
+    # ── NEW: long-occupancy / occupancy cross-check stress test ─────────────────
+    # Tier 2 (Ward): confirm window = 5 min. Duration = 480 s (8 min) > 5 min.
+    # Ward patient shower. Occupancy=1 throughout.
+    HardNegativeSpec(
+        neg_type        = HardNegativeType.LONG_HANDWASH,
+        fixture_id      = "fix-ward-004",
+        sensor_id       = _sid("fix-ward-004"),
+        start_ts        = _ts(DAY2, 10, 30),
+        end_ts          = _ts(DAY2, 10, 38),
+        long_duration_s = 480.0,   # 8 min; Tier 2 confirm window = 5 min
+        notes = ("Hard-neg (OCCUPANCY CROSS-CHECK, Tier 2): Ward patient shower, "
+                 "480 s active flow, occupancy=1 throughout. Duration 8 min > "
+                 "Tier 2 confirmation window (5 min). No leak alert expected."),
+    ),
 ]
 
 
@@ -358,6 +401,20 @@ DAY3_HARD_NEGATIVES: list[HardNegativeSpec] = [
         start_ts   = _D3_BURST_LOBBY.start_ts,
         end_ts     = _D3_BURST_LOBBY.end_ts,
         burst_id   = _D3_BURST_LOBBY.burst_id,
+    ),
+    # ── NEW: long-occupancy / occupancy cross-check stress test ─────────────────
+    # Tier 3 (Lab): confirm window = 7 min. Duration = 600 s (10 min) > 7 min.
+    # Lab technician extended scrub / instrument rinse. Occupancy=1 throughout.
+    HardNegativeSpec(
+        neg_type        = HardNegativeType.LONG_HANDWASH,
+        fixture_id      = "fix-lab-002",
+        sensor_id       = _sid("fix-lab-002"),
+        start_ts        = _ts(DAY3, 14,  0),
+        end_ts          = _ts(DAY3, 14, 10),
+        long_duration_s = 600.0,   # 10 min; Tier 3 confirm window = 7 min
+        notes = ("Hard-neg (OCCUPANCY CROSS-CHECK, Tier 3): Lab instrument rinse, "
+                 "600 s active flow, occupancy=1 throughout. Duration 10 min > "
+                 "Tier 3 confirmation window (7 min). No leak alert expected."),
     ),
 ]
 

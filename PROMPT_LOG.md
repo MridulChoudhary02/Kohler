@@ -184,3 +184,55 @@ itself yet — that's Phase 2, next message.
 **Rationale / deviations from PRD:** No PRD deviations. Traffic burst is PRD Phase 1 goal language but was explicitly NOT one of the 5 injectable anomaly types in Phase 1 acceptance criteria — treated correctly here as a usage modifier (not a fault). The grace period (10 min) is an implementation choice not specified by the PRD; it is set conservatively to match the PRD-specified longest confirmation window. Will revisit after Phase 2 precision/recall results; if Tier 1 TP rate is poor, grace can be made tier-specific.
 
 ---
+
+## [2026-09-15 19:15] — Pre-Phase 2 checkpoint: scoring fixes + hard-negative expansion
+
+**Trigger:** User instruction (pre-Phase 2 validation)
+
+**Prompt/instruction (summary):**
+1. De-duplication: confirm/fix match_detections_to_labels so each label absorbs
+   at most one TP. Decide: extra detections against a consumed label → "redundant
+   detections" (tracked separately, do NOT inflate TP or distort precision).
+2. Time-to-detection: add mean and median latency to ScoringResult.
+3. New hard-negative per tier: duration EXCEEDS that tier's confirmation window,
+   occupancy=1 throughout (real occupancy cross-check stress test, not duration-
+   only failures). Regenerate test set with these included.
+
+**Decision 1 — de-duplication design:**
+The existing greedy-earliest-match loop already prevents double-TP: it skips
+labels in `matched_label_ids` before the window check. The gap was: a detection
+that matches only an already-consumed label was silently falling into
+`false_positives`, which is wrong — it would have been a TP if it arrived first,
+so it must not penalise precision.
+Fix: two-pass inner loop. Pass 1: try unconsumed labels (TP if matched). Pass 2
+(only if pass 1 fails): check consumed labels with same fixture+category+window
+— if one matches, classify as `redundant_detection` (new field on ScoringResult),
+not FP. Redundant detections are logged but excluded from TP, FP, FN counts so
+they cannot distort any metric. Useful for Phase 2 diagnostics: an engine that
+re-fires repeatedly on one anomaly should show high redundant_detections count.
+Precision denominator remains TP + FP (not TP + FP + redundant).
+
+**Decision 2 — latency metrics:**
+Added `median_detection_latency_s` property to ScoringResult alongside the
+existing `mean_detection_latency_s`. Uses standard even/odd midpoint formula.
+Both appear in summary() and to_dict(). Rationale: median is more robust to
+a single very-late detection (e.g. gradual_leak caught 50 min in) inflating
+mean; both metrics together tell the Phase 2 story.
+
+**Decision 3 — long-occupancy hard negatives (one per tier):**
+Added 4 new HardNegativeSpec instances (one per criticality tier), each with
+neg_type=LONG_HANDWASH and long_duration_s EXCEEDING that tier's confirmation
+window. These stress-test the occupancy cross-check (Signal 2 in PRD §7.3):
+  Tier 1 (confirm=3min): ICU patient bath, fix-icu-005, 480s (8min), Day 1
+  Tier 2 (confirm=5min): Ward shower, fix-ward-004, 480s (8min), Day 2
+  Tier 3 (confirm=7min): Lab scrub, fix-lab-001, 600s (10min), Day 3
+  Tier 4 (confirm=10min): Lobby faucet, fix-lob-003, 720s (12min), Day 1
+All have occupancy=1 throughout so Signal 1 (idle-flow EWMA) should NOT fire;
+the detection engine must not raise a "leak" event because flow is active-use,
+not idle-flow. Short blips (60s pressure_blips) fail on duration alone — these
+new cases fail ONLY if the occupancy cross-check works correctly.
+
+**Files touched:** simulator/scoring.py, simulator/test_scenarios.py,
+  simulator/output/test_set/* (regenerated)
+
+---
