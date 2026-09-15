@@ -562,3 +562,34 @@ built, file by file.
 **Rationale / deviations from PRD:** Followed user instruction verbatim to commit and push Phase 3 implementation.
 
 ---
+
+## [2026-09-15 21:55] — Phase 3: Merge phase-3-sensor-hygiene into main and cleanup branch
+
+**Trigger:** User instruction (merge phase-3-sensor-hygiene into main with --no-ff and cleanup branch)
+
+**Prompt/instruction used:** 1. Check out `main` and pull latest.
+2. Merge `phase-3-sensor-hygiene` into `main` with --no-ff:
+
+   git checkout main
+   git pull origin main
+   git merge --no-ff phase-3-sensor-hygiene -m "Merge Phase 3: Sensor Health Scoring + Hygiene Prediction"
+   git push origin main
+
+3. Run the full test suite once more on main to confirm the merge
+   didn't break anything:
+   cd backend && python -m pytest detection/tests/ -v
+
+4. Delete the merged branch:
+   git branch -d phase-3-sensor-hygiene
+   git push origin --delete phase-3-sensor-hygiene
+
+5. Report: merge commit hash, test results on main, confirm main is
+   the sole branch (git branch -a).
+
+**Action taken:** Checked out `main`, pulled latest origin, merged `phase-3-sensor-hygiene` with `--no-ff` and pushed to `main`. Ran unit test suite on `main` to verify complete test pass (4/4 passed). Cleaned up local and remote `phase-3-sensor-hygiene` branches.
+
+**Files touched:** `PROMPT_LOG.md`, git merge/branch tracking
+
+**Rationale / deviations from PRD:** Followed user instruction verbatim to complete Phase 3 merge and branch cleanup.
+
+---
