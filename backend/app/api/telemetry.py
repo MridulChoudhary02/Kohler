@@ -125,7 +125,7 @@ async def ingest_telemetry(
 
             stmt = select(HygieneCounter).where(HygieneCounter.fixture_id == fid)
             res = await db.execute(stmt)
-            hc = res.scalar_one_or_none()
+            hc = res.scalars().first()
 
             if hc is None:
                 hc = HygieneCounter(

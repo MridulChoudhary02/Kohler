@@ -76,8 +76,29 @@ def test_ingest_batch_readings():
     assert data["readings_ingested"] == 2
 
 
+def test_get_events_endpoint():
+    response = client.get("/api/v1/events")
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
+
+
+def test_get_tickets_endpoint():
+    response = client.get("/api/v1/tickets")
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
+
+
+def test_get_hygiene_counters_endpoint():
+    response = client.get("/api/v1/hygiene-counters")
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
+
+
 if __name__ == "__main__":
     test_health_check()
     test_ingest_single_reading()
     test_ingest_batch_readings()
-    print("✅ Ingestion API unit tests PASSED")
+    test_get_events_endpoint()
+    test_get_tickets_endpoint()
+    test_get_hygiene_counters_endpoint()
+    print("✅ Ingestion & Query API unit tests PASSED")
