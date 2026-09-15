@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.models.models import TelemetryReading, DetectionEvent, HygieneCounter, Sensor
 from app.services.detection_service import detection_service
+from app.services.ticket_service import create_ticket_from_event
 
 router = APIRouter(tags=["Telemetry"])
 
@@ -137,7 +138,11 @@ async def ingest_telemetry(
                 db.add(hc)
             else:
                 hc.uses_since_clean = uses
-                hc.predicted_breach_time = pred_time
+        # 4. Create Ticket for dispatched events (PRD Section 10, Phase 5)
+        if db_ev.status == "dispatched":
+            ticket = await create_ticket_from_event(db_ev, db)
+            if ticket:
+                db.add(ticket)
 
     await db.flush()
 

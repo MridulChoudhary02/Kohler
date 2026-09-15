@@ -177,6 +177,11 @@ class Ticket(Base):
     # PRD: TICKET }o--|| TECHNICIAN (optional many-to-one assignment)
     assigned_tech_id = Column(String(36), ForeignKey("technicians.tech_id"), nullable=True)
 
+    # Status transition timestamps & escalation tracking
+    is_escalated    = Column(Boolean, nullable=False, default=False)
+    acknowledged_at = Column(DateTime(timezone=True), nullable=True)
+    resolved_at     = Column(DateTime(timezone=True), nullable=True)
+
     # LLM-generated summary (added in Phase 7, nullable until then)
     summary_text   = Column(Text, nullable=True)
 

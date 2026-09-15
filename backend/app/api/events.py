@@ -9,7 +9,7 @@ Endpoints:
 """
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
@@ -51,7 +51,10 @@ class TicketRead(BaseModel):
     sla_due: Optional[datetime] = None
     assigned_team: Optional[str] = None
     assigned_tech_id: Optional[str] = None
+    is_escalated: bool = False
     summary_text: Optional[str] = None
+    acknowledged_at: Optional[datetime] = None
+    resolved_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -173,25 +176,79 @@ async def get_event(
     "/tickets",
     response_model=List[TicketRead],
     summary="List tickets",
-    description="List ticket rows (empty until Phase 5 dispatch engine creates tickets).",
+    description="List ticket rows filterable by status, zone_id, assigned_tech_id, sorted by priority_score descending.",
 )
 async def list_tickets(
-    zone_id: Optional[str] = Query(None),
-    status: Optional[str] = Query(None),
-    limit: int = Query(50, ge=1, le=1000),
-    offset: int = Query(0, ge=0),
+    status: Optional[str] = Query(None, description="Filter by status: open | acknowledged | in_progress | resolved"),
+    zone_id: Optional[str] = Query(None, description="Filter by zone ID"),
+    assigned_tech_id: Optional[str] = Query(None, description="Filter by assigned technician ID"),
+    limit: int = Query(50, ge=1, le=1000, description="Page limit"),
+    offset: int = Query(0, ge=0, description="Page offset"),
     db: AsyncSession = Depends(get_db),
 ):
     stmt = select(Ticket)
-    if zone_id:
-        stmt = stmt.where(Ticket.zone_id == zone_id)
     if status:
         stmt = stmt.where(Ticket.status == status)
+    if zone_id:
+        stmt = stmt.where(Ticket.zone_id == zone_id)
+    if assigned_tech_id:
+        stmt = stmt.where(Ticket.assigned_tech_id == assigned_tech_id)
+
     stmt = stmt.order_by(Ticket.priority_score.desc()).offset(offset).limit(limit)
 
     res = await db.execute(stmt)
     tickets = res.scalars().all()
     return tickets
+
+
+@router.post(
+    "/tickets/{ticket_id}/acknowledge",
+    response_model=TicketRead,
+    summary="Acknowledge ticket",
+    description="Transition ticket status to 'acknowledged' with timestamp.",
+)
+async def acknowledge_ticket(
+    ticket_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    stmt = select(Ticket).where(Ticket.ticket_id == ticket_id)
+    res = await db.execute(stmt)
+    ticket = res.scalars().first()
+    if not ticket:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Ticket {ticket_id} not found",
+        )
+    ticket.status = "acknowledged"
+    ticket.acknowledged_at = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(ticket)
+    return ticket
+
+
+@router.post(
+    "/tickets/{ticket_id}/resolve",
+    response_model=TicketRead,
+    summary="Resolve ticket",
+    description="Transition ticket status to 'resolved' with timestamp.",
+)
+async def resolve_ticket(
+    ticket_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    stmt = select(Ticket).where(Ticket.ticket_id == ticket_id)
+    res = await db.execute(stmt)
+    ticket = res.scalars().first()
+    if not ticket:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Ticket {ticket_id} not found",
+        )
+    ticket.status = "resolved"
+    ticket.resolved_at = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(ticket)
+    return ticket
 
 
 @router.get(
