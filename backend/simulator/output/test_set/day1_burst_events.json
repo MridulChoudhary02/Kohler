@@ -1,0 +1,15 @@
+{
+  "generated_at": "2026-09-15T13:36:10.783351+00:00",
+  "simulation_date": "2026-09-15",
+  "burst_events": [
+    {
+      "burst_id": "burst-zone-ward-0730",
+      "zone_id": "zone-ward",
+      "fixture_ids": [],
+      "start_timestamp": "2026-09-15T07:30:00+00:00",
+      "end_timestamp": "2026-09-15T09:30:00+00:00",
+      "usage_rate_multiplier": 2.5,
+      "notes": "Day 1 hard-neg: morning shift-change surge in General Ward (Tier 2)."
+    }
+  ]
+}

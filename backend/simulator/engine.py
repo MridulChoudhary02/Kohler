@@ -15,14 +15,13 @@ plus a ground-truth labels list.
 """
 from __future__ import annotations
 
-import math
 import random
 import uuid
-from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 from simulator.anomaly import AnomalySpec, AnomalyType, is_in_window
+from simulator.burst import BurstSpec, HardNegativeSpec, HardNegativeType
 from simulator.profiles import (
     BASE_USES_PER_HOUR,
     FIXTURE_PROFILES,
@@ -48,29 +47,36 @@ class FixtureSimulator:
 
     def __init__(
         self,
-        fixture_id:  str,
-        sensor_id:   str,
-        fixture_type: str,
-        zone_tier:   str,
-        rng:         random.Random,
-        anomaly_specs: list[AnomalySpec] | None = None,
+        fixture_id:    str,
+        sensor_id:     str,
+        fixture_type:  str,
+        zone_tier:     str,
+        zone_id:       str,
+        rng:           random.Random,
+        anomaly_specs:      list[AnomalySpec]      | None = None,
+        burst_specs:        list[BurstSpec]         | None = None,
+        hard_negative_specs: list[HardNegativeSpec] | None = None,
     ):
         self.fixture_id   = fixture_id
         self.sensor_id    = sensor_id
         self.fixture_type = fixture_type
         self.zone_tier    = zone_tier
+        self.zone_id      = zone_id
         self.rng          = rng
-        self.anomaly_specs = anomaly_specs or []
+        self.anomaly_specs       = anomaly_specs or []
+        self.burst_specs         = burst_specs or []
+        self.hard_negative_specs = hard_negative_specs or []
         self.profile: FixtureTypeProfile = FIXTURE_PROFILES[fixture_type]
 
         # Internal state
-        self._use_end_ts:    Optional[datetime] = None   # when current use event ends
-        self._flush_end_ts:  Optional[datetime] = None   # when current flush ends
-        self._flush_volume_l: float = 0.0                # L/min during flush
-        self._post_flush_end_ts: Optional[datetime] = None  # decay period end
-        self._occupancy:     int = 0
-        # EWMA of flow for this fixture (for gradual-leak ramp tracking)
-        self._flow_ewma:     float = 0.0
+        self._use_end_ts:         Optional[datetime] = None
+        self._flush_end_ts:       Optional[datetime] = None
+        self._flush_volume_l:     float              = 0.0
+        self._post_flush_end_ts:  Optional[datetime] = None
+        self._occupancy:          int                = 0
+        self._flow_ewma:          float              = 0.0
+        # Hard-negative state
+        self._forced_use_end_ts:  Optional[datetime] = None   # long_handwash forced event
 
     # ─────────────────────────────────────────────────────────────────────────
     # READING GENERATION
@@ -81,6 +87,40 @@ class FixtureSimulator:
         Return a telemetry_readings-schema dict for timestamp ts.
         Returns None if the anomaly type is sensor_dropout (gap in readings).
         """
+        # ── Hard negative: pressure_blip ────────────────────────────────────
+        # Checked before anomalies so it's not masked by anomaly logic.
+        # A brief occupancy=0 flow pulse; duration < any confirmation window.
+        blip_specs = [
+            s for s in self.hard_negative_specs
+            if s.neg_type == HardNegativeType.PRESSURE_BLIP and s.start_ts <= ts < s.end_ts
+        ]
+        if blip_specs:
+            blip = blip_specs[0]
+            blip_end = blip.start_ts + timedelta(seconds=blip.blip_duration_s)
+            if ts < blip_end:
+                flow = max(0.0, self.rng.gauss(blip.blip_flow_lpm, 0.03))
+                return self._make_reading(ts, flow, 0, 0, "ok")
+
+        # ── Hard negative: long_handwash ─────────────────────────────────────
+        # Force the fixture into IN_USE state for a long duration.
+        # Occupancy=1 throughout, so Signal 1 (idle-flow EWMA) should not fire.
+        lhw_specs = [
+            s for s in self.hard_negative_specs
+            if s.neg_type == HardNegativeType.LONG_HANDWASH and s.start_ts <= ts < s.end_ts
+        ]
+        if lhw_specs:
+            lhw = lhw_specs[0]
+            forced_end = lhw.start_ts + timedelta(seconds=lhw.long_duration_s)
+            if self._forced_use_end_ts is None:
+                self._forced_use_end_ts = forced_end
+            if ts < self._forced_use_end_ts:
+                flow = max(0.0, self.rng.gauss(
+                    self.profile.active_flow_mean, self.profile.active_flow_std
+                ))
+                return self._make_reading(ts, flow, 0, 1, "ok")   # occupancy=1
+            else:
+                self._forced_use_end_ts = None   # reset after event
+
         # Check for active anomalies
         active_anomalies = [s for s in self.anomaly_specs if is_in_window(ts, s)]
 
@@ -160,7 +200,15 @@ class FixtureSimulator:
         """
         hour = ts.hour
         base_rate = BASE_USES_PER_HOUR.get(self.fixture_type, 4.0)
-        rate_per_second = (base_rate * usage_multiplier(hour, self.zone_tier)) / 3600.0
+        base_multiplier = usage_multiplier(hour, self.zone_tier)
+
+        # Apply burst multiplier if an active BurstSpec covers this fixture
+        burst_mult = 1.0
+        for burst in self.burst_specs:
+            if burst.start_ts <= ts < burst.end_ts and burst.applies_to(self.fixture_id, self.zone_id):
+                burst_mult = max(burst_mult, burst.usage_rate_multiplier)
+
+        rate_per_second = (base_rate * base_multiplier * burst_mult) / 3600.0
 
         # --- Start a new use event stochastically ---
         if self._use_end_ts is None or ts >= self._use_end_ts:
@@ -283,28 +331,36 @@ class SimulatorEngine:
 
     def __init__(
         self,
-        fixtures:      list[dict[str, str]],
-        anomaly_specs: list[AnomalySpec] | None = None,
-        seed:          int = 42,
+        fixtures:           list[dict[str, str]],
+        anomaly_specs:      list[AnomalySpec]      | None = None,
+        burst_specs:        list[BurstSpec]         | None = None,
+        hard_negative_specs: list[HardNegativeSpec] | None = None,
+        seed:               int = 42,
     ):
-        self.anomaly_specs = anomaly_specs or []
+        self.anomaly_specs       = anomaly_specs or []
+        self.burst_specs         = burst_specs or []
+        self.hard_negative_specs = hard_negative_specs or []
         self._rng = random.Random(seed)
 
         self._fixture_sims: list[FixtureSimulator] = []
         for fx in fixtures:
-            # Give each fixture its own Random sub-stream to keep them independent
             fx_seed = self._rng.randint(0, 2**31)
-            per_fixture_anomalies = [
-                s for s in self.anomaly_specs if s.fixture_id == fx["fixture_id"]
-            ]
+            fid = fx["fixture_id"]
+            zid = fx.get("zone_id", "")
+            per_fixture_anomalies  = [s for s in self.anomaly_specs       if s.fixture_id == fid]
+            per_fixture_hard_negs  = [s for s in self.hard_negative_specs if s.fixture_id == fid]
+            # Bursts: pass all of them — each BurstSpec.applies_to() checks the fixture
             self._fixture_sims.append(
                 FixtureSimulator(
-                    fixture_id   = fx["fixture_id"],
-                    sensor_id    = fx["sensor_id"],
-                    fixture_type = fx["fixture_type"],
-                    zone_tier    = fx["zone_tier"],
-                    rng          = random.Random(fx_seed),
-                    anomaly_specs= per_fixture_anomalies,
+                    fixture_id          = fid,
+                    sensor_id           = fx["sensor_id"],
+                    fixture_type        = fx["fixture_type"],
+                    zone_tier           = fx["zone_tier"],
+                    zone_id             = zid,
+                    rng                 = random.Random(fx_seed),
+                    anomaly_specs       = per_fixture_anomalies,
+                    burst_specs         = self.burst_specs,
+                    hard_negative_specs = per_fixture_hard_negs,
                 )
             )
 
@@ -312,14 +368,15 @@ class SimulatorEngine:
         self,
         start_ts: datetime,
         end_ts:   datetime,
-    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
         """
-        Run the simulation from start_ts to end_ts (exclusive), emitting one
-        reading every READING_INTERVAL_S seconds per fixture.
+        Run the simulation from start_ts to end_ts (exclusive).
 
         Returns:
-            readings: list of telemetry_reading dicts (sorted by timestamp)
-            labels:   list of ground-truth anomaly label dicts
+            readings:       telemetry_reading dicts (sorted by timestamp)
+            labels:         ground-truth anomaly label dicts  → anomaly_labels.json
+            burst_events:   burst event dicts                 → burst_events.json
+            hard_neg_events: hard-negative event dicts        → hard_negative_events.json
         """
         readings: list[dict[str, Any]] = []
 
@@ -327,14 +384,14 @@ class SimulatorEngine:
         while ts < end_ts:
             for sim in self._fixture_sims:
                 reading = sim.reading_at(ts)
-                if reading is not None:   # None = dropout (no row emitted)
+                if reading is not None:
                     readings.append(reading)
             ts += timedelta(seconds=READING_INTERVAL_S)
 
-        # Sort readings by timestamp (mixed fixture outputs are interleaved)
         readings.sort(key=lambda r: r["timestamp"])
 
-        # Ground-truth labels
-        labels = [spec.to_label_dict() for spec in self.anomaly_specs]
+        labels          = [s.to_label_dict()   for s in self.anomaly_specs]
+        burst_events    = [s.to_event_dict()   for s in self.burst_specs]
+        hard_neg_events = [s.to_event_dict()   for s in self.hard_negative_specs]
 
-        return readings, labels
+        return readings, labels, burst_events, hard_neg_events

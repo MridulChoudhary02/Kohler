@@ -1,0 +1,15 @@
+{
+  "generated_at": "2026-09-15T13:36:11.625694+00:00",
+  "simulation_date": "2026-09-17",
+  "burst_events": [
+    {
+      "burst_id": "burst-zone-lobby-1600",
+      "zone_id": "zone-lobby",
+      "fixture_ids": [],
+      "start_timestamp": "2026-09-17T16:00:00+00:00",
+      "end_timestamp": "2026-09-17T18:00:00+00:00",
+      "usage_rate_multiplier": 3.0,
+      "notes": "Day 3 hard-neg: visiting-hours surge in Lobby (Tier 4)."
+    }
+  ]
+}

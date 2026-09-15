@@ -1,0 +1,15 @@
+{
+  "generated_at": "2026-09-15T13:36:24.277260+00:00",
+  "simulation_date": "2026-09-15",
+  "burst_events": [
+    {
+      "burst_id": "burst-zone-ward-0730",
+      "zone_id": "zone-ward",
+      "fixture_ids": [],
+      "start_timestamp": "2026-09-15T07:30:00+00:00",
+      "end_timestamp": "2026-09-15T09:30:00+00:00",
+      "usage_rate_multiplier": 2.5,
+      "notes": "Traffic burst on zone zone-ward: 2.5\u00d7 normal usage rate for 120 min from 2026-09-15T07:30:00+00:00."
+    }
+  ]
+}

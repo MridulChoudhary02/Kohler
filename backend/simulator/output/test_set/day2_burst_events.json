@@ -1,0 +1,15 @@
+{
+  "generated_at": "2026-09-15T13:36:11.208182+00:00",
+  "simulation_date": "2026-09-16",
+  "burst_events": [
+    {
+      "burst_id": "burst-zone-icu-0600",
+      "zone_id": "zone-icu",
+      "fixture_ids": [],
+      "start_timestamp": "2026-09-16T06:00:00+00:00",
+      "end_timestamp": "2026-09-16T08:00:00+00:00",
+      "usage_rate_multiplier": 2.0,
+      "notes": "Day 2 hard-neg: early morning clinical-round surge in ICU (Tier 1)."
+    }
+  ]
+}

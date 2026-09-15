@@ -1,0 +1,74 @@
+{
+  "generated_at": "2026-09-15T13:36:11.626496+00:00",
+  "base_seed": 42,
+  "total_readings": 172530,
+  "total_anomaly_labels": 15,
+  "total_burst_events": 3,
+  "total_hard_negatives": 9,
+  "days": [
+    {
+      "day": 1,
+      "date": "2026-09-15",
+      "seed": 42,
+      "reading_count": 57510,
+      "anomaly_count": 5,
+      "burst_count": 1,
+      "hard_neg_count": 3
+    },
+    {
+      "day": 2,
+      "date": "2026-09-16",
+      "seed": 1042,
+      "reading_count": 57510,
+      "anomaly_count": 5,
+      "burst_count": 1,
+      "hard_neg_count": 3
+    },
+    {
+      "day": 3,
+      "date": "2026-09-17",
+      "seed": 2042,
+      "reading_count": 57510,
+      "anomaly_count": 5,
+      "burst_count": 1,
+      "hard_neg_count": 3
+    }
+  ],
+  "anomaly_type_coverage": [
+    {
+      "anomaly_type": "gradual_leak",
+      "count": 3,
+      "day1_tier": "?",
+      "day2_tier": "?",
+      "day3_tier": "?"
+    },
+    {
+      "anomaly_type": "sensor_dropout",
+      "count": 3,
+      "day1_tier": "?",
+      "day2_tier": "?",
+      "day3_tier": "?"
+    },
+    {
+      "anomaly_type": "sensor_flatline",
+      "count": 3,
+      "day1_tier": "?",
+      "day2_tier": "?",
+      "day3_tier": "?"
+    },
+    {
+      "anomaly_type": "stuck_valve",
+      "count": 3,
+      "day1_tier": "?",
+      "day2_tier": "?",
+      "day3_tier": "?"
+    },
+    {
+      "anomaly_type": "sudden_leak",
+      "count": 3,
+      "day1_tier": "?",
+      "day2_tier": "?",
+      "day3_tier": "?"
+    }
+  ]
+}

@@ -130,3 +130,57 @@ ground-truth label. Don't start Phase 2 yet.
 **Rationale / deviations from PRD:** PRD says "traffic burst" is an injectable scenario in Phase 1 — it is not listed as one of the 5 anomaly types in the Phase 1 acceptance criteria but IS listed in the Phase 1 goal description. Decision: traffic burst is handled via the --anomaly-start/--anomaly-duration mechanism against a fixture in a Tier 1 zone (which naturally simulates a burst in the usage curve). This is not a separate anomaly injection because traffic burst is a legitimate usage pattern, not a fault — it produces a real increase in hygiene counter uses_per_minute which Phase 3's prediction engine uses. This distinction is intentional: mixing normal bursts with injected faults would corrupt Phase 2 precision/recall. Will revisit if Phase 3 testing requires explicit traffic burst injection.
 
 ---
+
+## [2026-09-15 14:37] — Pre-Phase 2: Traffic burst mode, match-scoring, expanded test set
+
+**Trigger:** User instruction (pre-Phase 2 validation)
+
+**Prompt/instruction used:** Before Phase 2, resolve three things and log the decisions:
+
+1. Traffic burst: add an explicit, controllable traffic-burst generation
+   mode to the simulator (a sustained usage-rate spike on a fixture/zone,
+   not a fault/anomaly — no ground-truth anomaly label, since it's normal
+   behavior). Phase 3 needs this to test hygiene lead-time prediction.
+   Confirm it's separate from anomaly_labels.json.
+
+2. Define and implement the match-scoring rule for precision/recall, and
+   put it in a shared module (not inline in a one-off script) since Phase 2
+   will use it repeatedly:
+   - True positive: a detection_event on the same fixture with detected_at
+     falling within [start_timestamp, end_timestamp + grace_period] of a
+     ground-truth label of the matching type.
+   - False positive: any detection_event with no matching ground-truth label.
+   - False negative: any ground-truth label with no matching detection_event
+     within its window + grace period.
+   Propose a grace_period value with reasoning, make it a named config
+   constant, and state your reasoning for the matching logic explicitly.
+
+3. Expand the labeled test set before Phase 2 is validated against it:
+   - Multiple days (at least 3), multiple anomaly instances per type,
+     spread across different tiers (not just one example per type).
+   - Add "hard negative" scenarios — realistic normal behavior that could
+     fool a naive threshold detector: an unusually long but legitimate
+     hand-wash/shower, a brief pressure blip correlated with a neighboring
+     fixture's flush, and a legitimate shift-change traffic burst (using
+     the new burst mode from #1). These must NOT appear in
+     anomaly_labels.json — they exist specifically to test the false-
+     positive rate.
+
+Log all three decisions in PROMPT_LOG.md per the usual format.
+
+Once done, regenerate the test set and show me: the burst-mode sample,
+the match-scoring module, and a count of how many hard-negative scenarios
+are now in the expanded set. Don't start building the detection engine
+itself yet — that's Phase 2, next message.
+
+**Action taken (decision 1 — traffic burst):** Added BurstSpec dataclass in simulator/burst.py. Burst events spike the usage_rate_multiplier applied inside FixtureSimulator._compute_normal_flow — they increase how often Poisson use-events fire, but do not alter flow_rate_lpm, flush_event, or occupancy beyond what a legitimate use event produces. Written to burst_events.json (separate file, explicitly never written to anomaly_labels.json). The FixtureSimulator receives burst_specs alongside anomaly_specs but treats them as an orthogonal concern. Also added HardNegativeSpec for long_handwash and pressure_blip scenarios.
+
+**Action taken (decision 2 — match-scoring):** Created simulator/scoring.py with MatchResult dataclass and match_detections_to_labels() function. Grace period = 10 minutes (DETECTION_GRACE_PERIOD_MINUTES in config.py). Reasoning: the worst-case confirmation window is 10 min (Tier 4, PRD Section 7.2). A detection engine cannot flag a leak until after the full confirmation window has elapsed, so a TP fired at anomaly_start+10min is still a true positive — the detection was correct, just took the maximum time to accumulate evidence. Setting grace to exactly 10 min covers all tiers without over-generous matching. The match requires (a) same fixture_id, (b) anomaly_type category matches detection event_type (sudden_leak/gradual_leak/stuck_valve → "leak"; sensor_flatline/sensor_dropout → "sensor_fault"), (c) detected_at in [label.start_timestamp, label.end_timestamp + grace]. Each ground-truth label may only absorb one TP (greedy earliest-match), and each detection_event counts for at most one TP.
+
+**Action taken (decision 3 — expanded test set):** Defined 3-day scenario set in simulator/test_scenarios.py: 15 true anomaly labels (5 types × 3 days, each type covering a different tier across the 3 days), 9 hard-negative scenarios (3 per day: long_handwash, pressure_blip, traffic_burst). Generated via simulator/generate_test_set.py, which writes one JSONL + one labels JSON per day, plus a combined summary. Hard negatives write to hard_negative_events.json — not anomaly_labels.json.
+
+**Files touched:** simulator/burst.py (new), simulator/scoring.py (new), simulator/test_scenarios.py (new), simulator/generate_test_set.py (new), simulator/engine.py (updated), simulator/runner.py (updated), backend/app/core/config.py (DETECTION_GRACE_PERIOD_MINUTES added)
+
+**Rationale / deviations from PRD:** No PRD deviations. Traffic burst is PRD Phase 1 goal language but was explicitly NOT one of the 5 injectable anomaly types in Phase 1 acceptance criteria — treated correctly here as a usage modifier (not a fault). The grace period (10 min) is an implementation choice not specified by the PRD; it is set conservatively to match the PRD-specified longest confirmation window. Will revisit after Phase 2 precision/recall results; if Tier 1 TP rate is poor, grace can be made tier-specific.
+
+---

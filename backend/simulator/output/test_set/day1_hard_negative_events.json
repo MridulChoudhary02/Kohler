@@ -1,0 +1,54 @@
+{
+  "generated_at": "2026-09-15T13:36:10.783493+00:00",
+  "simulation_date": "2026-09-15",
+  "hard_negative_events": [
+    {
+      "neg_id": "neg-fix-ward-004-long_handwash-1130",
+      "neg_type": "long_handwash",
+      "fixture_id": "fix-ward-004",
+      "sensor_id": "sen-ward-004",
+      "start_timestamp": "2026-09-15T11:30:00+00:00",
+      "end_timestamp": "2026-09-15T11:42:00+00:00",
+      "parameters": {
+        "long_duration_s": 600.0,
+        "blip_flow_lpm": 0.3,
+        "blip_duration_s": 60.0,
+        "burst_id": null
+      },
+      "notes": "Hard negative \u2014 long handwash/shower: 600s legitimate use on fix-ward-004. Occupancy=1 throughout; flow returns to baseline when done. Should NOT trigger leak alert.",
+      "expected_detection": false
+    },
+    {
+      "neg_id": "neg-fix-icu-001-pressure_blip-0800",
+      "neg_type": "pressure_blip",
+      "fixture_id": "fix-icu-001",
+      "sensor_id": "sen-icu-001",
+      "start_timestamp": "2026-09-15T08:00:00+00:00",
+      "end_timestamp": "2026-09-15T08:01:00+00:00",
+      "parameters": {
+        "long_duration_s": 300.0,
+        "blip_flow_lpm": 0.3,
+        "blip_duration_s": 60.0,
+        "burst_id": null
+      },
+      "notes": "Hard negative \u2014 pressure blip: 0.30 L/min for 60s on fix-icu-001 at occupancy=0. Caused by neighboring fixture flush. Duration < any confirmation window.",
+      "expected_detection": false
+    },
+    {
+      "neg_id": "neg-zone-ward-traffic_burst-0730",
+      "neg_type": "traffic_burst",
+      "fixture_id": "zone-ward",
+      "sensor_id": "",
+      "start_timestamp": "2026-09-15T07:30:00+00:00",
+      "end_timestamp": "2026-09-15T09:30:00+00:00",
+      "parameters": {
+        "long_duration_s": 300.0,
+        "blip_flow_lpm": 0.3,
+        "blip_duration_s": 60.0,
+        "burst_id": "burst-zone-ward-0730"
+      },
+      "notes": "Hard negative \u2014 legitimate traffic burst on zone-ward: 120.0 min of elevated usage. Uses hygiene counter but is normal. Should NOT trigger leak alert, only hygiene prediction.",
+      "expected_detection": false
+    }
+  ]
+}

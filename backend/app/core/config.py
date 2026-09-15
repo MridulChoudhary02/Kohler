@@ -39,6 +39,16 @@ class Settings(BaseSettings):
     CONFIRMATION_WINDOW_TIER3_MIN: int = 7
     CONFIRMATION_WINDOW_TIER4_MIN: int = 10
 
+    # Grace period for precision/recall matching (scoring.py, Phase 2).
+    # A detection_event counts as a TP if detected_at ∈
+    #   [label.start_timestamp, label.end_timestamp + grace].
+    # Set to 10 min = worst-case Tier 4 confirmation window: a detection engine
+    # cannot flag a leak before a full confirmation window has elapsed (PRD §7.2),
+    # so a correct detection fired at anomaly_start + 10 min is still a TP.
+    # This is conservative — covers all tiers without over-generous matching.
+    DETECTION_GRACE_PERIOD_MINUTES: int = 10
+
+
     # ── Section 7.5 — Confidence scoring weights ──────────────────────────────
     # confidence = w1×(EWMA deviation, normalised)
     #            + w2×(occupancy cross-check boost, 0 or 1)
