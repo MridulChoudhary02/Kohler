@@ -91,7 +91,7 @@ export const CompactAlertsList: React.FC<CompactAlertsListProps> = ({
                       {ev.fixture_id} • <span style={{ color: '#8f8f8f', fontWeight: 400 }}>{ev.zone_name || ev.zone_id}</span>
                     </div>
                     <div style={{ fontSize: '0.75rem', color: '#8f8f8f', marginTop: '2px' }}>
-                      {(ev.confidence_score * 100).toFixed(0)}% confidence • {new Date(ev.detected_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {(ev.confidence_score * 100).toFixed(0)}% confidence • {ev.detected_at.slice(11, 16)}
                     </div>
                   </div>
                 </div>

@@ -2,7 +2,7 @@
 
 // frontend/src/app/chat/page.tsx — Grounded Facility Intelligence Chat Interface
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MessageSquare, Send, Sparkles, User, Bot, Loader2 } from 'lucide-react';
 import { sendChatQuery } from '../../lib/api';
 
@@ -20,12 +20,18 @@ const STARTER_QUERIES = [
 ];
 
 export default function ChatPage() {
+  const [mounted, setMounted] = useState<boolean>(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
       sender: 'assistant',
       text: 'Hello. I am the Kohler Facility Intelligence Assistant. I can answer questions grounded in real-time hospital hydraulic telemetry, learned baselines, and active operational dispatch tickets. How can I assist you?',
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      timestamp: '',
     },
   ]);
   const [inputValue, setInputValue] = useState<string>('');
@@ -163,7 +169,7 @@ export default function ChatPage() {
                     {isUser ? 'Facility Manager' : 'Kohler LLM Engine'}
                   </span>
                   <span className="font-mono" style={{ fontSize: '0.65rem', color: '#525252' }}>
-                    {msg.timestamp}
+                    {mounted ? (msg.timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })) : ''}
                   </span>
                 </div>
                 <div style={{ fontSize: '0.875rem', color: '#ededed', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
