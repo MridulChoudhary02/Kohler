@@ -1,9 +1,11 @@
-// frontend/src/components/TicketKanbanBoard.tsx — View 3: Kanban Ticket Board with Action Transitions
+// frontend/src/components/TicketKanbanBoard.tsx — View 3: Kanban Ticket Board with shadcn Card/Badge Components
 
 import React from 'react';
 import { Kanban, Clock, AlertTriangle, CheckCircle, Play, Eye } from 'lucide-react';
 import { Ticket } from '../lib/types';
 import { acknowledgeTicket, startTicket, resolveTicket } from '../lib/api';
+import { Card } from './ui/card';
+import { Badge } from './ui/badge';
 
 interface TicketKanbanBoardProps {
   tickets: Ticket[];
@@ -117,7 +119,7 @@ export const TicketKanbanBoard: React.FC<TicketKanbanBoardProps> = ({
                 </span>
               </div>
 
-              {/* Column Cards */}
+              {/* Column Cards — Migrated to shadcn Card & Badge components */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {colTickets.length === 0 ? (
                   <div style={{ padding: '24px 0', textAlign: 'center', color: '#64748b', fontSize: '0.78rem' }}>
@@ -131,17 +133,15 @@ export const TicketKanbanBoard: React.FC<TicketKanbanBoardProps> = ({
                     const borderAccent = isTier1 ? '#e11d48' : isTier2 ? '#d97706' : 'var(--panel-border)';
 
                     return (
-                      <div
+                      <Card
                         key={ticket.ticket_id}
                         onClick={() => onSelectTicket(ticket)}
+                        className="p-3 cursor-pointer transition-colors duration-150 hover:bg-[#172033]"
                         style={{
                           background: 'var(--panel-bg)',
                           border: `1px solid ${ticket.is_escalated ? '#e11d48' : 'var(--panel-border)'}`,
                           borderLeft: `3px solid ${borderAccent}`,
                           borderRadius: '3px',
-                          padding: '12px',
-                          cursor: 'pointer',
-                          transition: 'background 0.12s ease'
                         }}
                       >
                         {/* Top row */}
@@ -149,17 +149,17 @@ export const TicketKanbanBoard: React.FC<TicketKanbanBoardProps> = ({
                           <span className="font-mono" style={{ fontSize: '0.7rem', fontWeight: 600, color: '#64748b' }}>
                             #{ticket.ticket_id.slice(0, 8)}
                           </span>
-                          <span className="font-mono" style={{
-                            background: ticket.priority_score >= 80 ? 'rgba(225, 29, 72, 0.15)' : 'rgba(6, 182, 212, 0.15)',
-                            color: ticket.priority_score >= 80 ? '#fda4af' : '#22d3ee',
-                            border: `1px solid ${ticket.priority_score >= 80 ? 'rgba(225, 29, 72, 0.3)' : 'rgba(6, 182, 212, 0.3)'}`,
-                            padding: '1px 6px',
-                            borderRadius: '2px',
-                            fontSize: '0.72rem',
-                            fontWeight: 700
-                          }}>
+                          <Badge
+                            variant="outline"
+                            className="font-mono text-[0.72rem] font-bold px-1.5 py-0.5 rounded-[2px]"
+                            style={{
+                              background: ticket.priority_score >= 80 ? 'rgba(225, 29, 72, 0.15)' : 'rgba(6, 182, 212, 0.15)',
+                              color: ticket.priority_score >= 80 ? '#fda4af' : '#22d3ee',
+                              borderColor: ticket.priority_score >= 80 ? 'rgba(225, 29, 72, 0.3)' : 'rgba(6, 182, 212, 0.3)',
+                            }}
+                          >
                             {ticket.priority_score.toFixed(1)}
-                          </span>
+                          </Badge>
                         </div>
 
                         {/* Zone & Escalation */}
@@ -168,9 +168,12 @@ export const TicketKanbanBoard: React.FC<TicketKanbanBoardProps> = ({
                         </div>
 
                         {ticket.is_escalated && (
-                          <div className="tag-tech tag-tier1" style={{ marginBottom: '6px', fontSize: '0.62rem' }}>
+                          <Badge
+                            variant="destructive"
+                            className="tag-tech tag-tier1 font-mono text-[0.62rem] gap-1 mb-1.5"
+                          >
                             <AlertTriangle size={10} /> AUTO-ESCALATED (+25)
-                          </div>
+                          </Badge>
                         )}
 
                         {/* Team & Summary */}
@@ -239,7 +242,7 @@ export const TicketKanbanBoard: React.FC<TicketKanbanBoardProps> = ({
                             <Eye size={12} color="#94a3b8" />
                           </button>
                         </div>
-                      </div>
+                      </Card>
                     );
                   })
                 )}
@@ -251,4 +254,3 @@ export const TicketKanbanBoard: React.FC<TicketKanbanBoardProps> = ({
     </div>
   );
 };
-
