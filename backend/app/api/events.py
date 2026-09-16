@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.models.models import DetectionEvent, Fixture, Zone, Ticket, HygieneCounter, BaselineProfile, Sensor, TelemetryReading
+from app.services.llm_service import summarize_incident, answer_facility_query
 
 router = APIRouter(tags=["Events & Operations"])
 
@@ -96,6 +97,19 @@ class TelemetryReadingRead(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ChatQueryRequest(BaseModel):
+    query: str
+
+
+class ChatQueryResponse(BaseModel):
+    answer: str
+
+
+class SummaryRegenerateResponse(BaseModel):
+    ticket_id: str
+    summary_text: str
 
 
 # ─────────────────────────────────────────────
@@ -409,3 +423,61 @@ async def get_fixture_telemetry(
     res = await db.execute(stmt)
     readings = res.scalars().all()
     return readings
+
+
+@router.post(
+    "/chat",
+    response_model=ChatQueryResponse,
+    summary="Chat-over-data query interface",
+    description="Ask natural-language queries about facility status, active leaks, priority tickets, and sensor health (PRD Section 12b).",
+)
+async def chat_query(
+    body: ChatQueryRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    answer = await answer_facility_query(body.query, db)
+    return ChatQueryResponse(answer=answer)
+
+
+@router.post(
+    "/tickets/{ticket_id}/summary/regenerate",
+    response_model=SummaryRegenerateResponse,
+    summary="Regenerate ticket summary",
+    description="Regenerates the LLM-derived summary for an existing ticket using its event, fixture, and zone context (PRD Section 12a).",
+)
+async def regenerate_ticket_summary(
+    ticket_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    stmt = select(Ticket).where(Ticket.ticket_id == ticket_id)
+    res = await db.execute(stmt)
+    ticket = res.scalars().first()
+    if not ticket:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Ticket {ticket_id} not found",
+        )
+
+    # Fetch event, fixture, and zone for this ticket
+    event_stmt = select(DetectionEvent).where(DetectionEvent.event_id == ticket.event_id)
+    event_res = await db.execute(event_stmt)
+    event = event_res.scalars().first()
+
+    fixture_obj, zone_obj = None, None
+    if event:
+        fz_stmt = (
+            select(Fixture, Zone)
+            .join(Zone, Fixture.zone_id == Zone.zone_id)
+            .where(Fixture.fixture_id == event.fixture_id)
+        )
+        fz_res = await db.execute(fz_stmt)
+        fz_row = fz_res.first()
+        if fz_row:
+            fixture_obj, zone_obj = fz_row
+
+    summary = summarize_incident(ticket, event, fixture_obj, zone_obj)
+    ticket.summary_text = summary
+    await db.commit()
+    await db.refresh(ticket)
+    return SummaryRegenerateResponse(ticket_id=ticket.ticket_id, summary_text=summary)
+
