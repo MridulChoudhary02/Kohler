@@ -1,4 +1,6 @@
-/* frontend/src/app/globals.css — Hospital Facility Command Center Design System */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap');
 
@@ -179,5 +181,37 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-dim);
+}
+@layer base {
+  :root, .dark {
+    --background: var(--console-bg);
+    --foreground: var(--text-main);
+    --card: var(--panel-bg);
+    --card-foreground: var(--text-main);
+    --popover: var(--panel-bg);
+    --popover-foreground: var(--text-main);
+    --primary: var(--telemetry-cyan);
+    --primary-foreground: #080c14;
+    --secondary: #172033;
+    --secondary-foreground: var(--text-main);
+    --muted: #172033;
+    --muted-foreground: var(--text-muted);
+    --accent: #172033;
+    --accent-foreground: var(--text-main);
+    --destructive: var(--tier1-crimson);
+    --destructive-foreground: #ffffff;
+    --border: var(--panel-border);
+    --input: var(--panel-border);
+    --ring: var(--telemetry-cyan);
+    --radius: 4px;
+  }
+}
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }
 
