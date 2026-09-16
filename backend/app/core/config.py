@@ -16,9 +16,12 @@ class Settings(BaseSettings):
     APP_NAME: str = "Kohler Smart Facility & Sustainability Manager"
     APP_VERSION: str = "0.1.0"
 
-    # ── LLM (Phase 7 — unused until then) ────────────────────────────────────
-    LLM_PROVIDER: str = "openai"
-    LLM_MODEL: str = "gpt-4o"
+    # ── LLM (Phase 7) ─────────────────────────────────────────────────────────
+    LLM_PROVIDER: str = "groq"
+    LLM_MODEL: str = "openai/gpt-oss-120b"
+    # litellm reads GROQ_API_KEY from env automatically when model="groq/..."
+    GROQ_API_KEY: str = ""
+    # Kept for backward compatibility; not required when using Groq
     OPENAI_API_KEY: str = ""
 
     # ── Section 7.1 — Baseline learning ──────────────────────────────────────

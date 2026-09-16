@@ -108,17 +108,21 @@ async def create_ticket_from_event(
 
     # Fetch fixture and zone details
     stmt = (
-        select(Fixture.zone_id, Zone.criticality_tier)
+        select(Fixture, Zone)
         .join(Zone, Fixture.zone_id == Zone.zone_id)
         .where(Fixture.fixture_id == event.fixture_id)
     )
     res = await db.execute(stmt)
     row = res.first()
     if not row:
+        fixture_obj = None
+        zone_obj = None
         zone_id = "zone-default"
         zone_tier = "Tier 4"
     else:
-        zone_id, zone_tier = row
+        fixture_obj, zone_obj = row
+        zone_id = zone_obj.zone_id
+        zone_tier = zone_obj.criticality_tier
 
     response_minutes = ZONE_SLA_MINUTES.get(zone_tier, 120)
     assigned_team = ZONE_TEAMS.get(zone_tier, "General Facilities")
@@ -144,6 +148,14 @@ async def create_ticket_from_event(
         sla_due=sla_due,
         assigned_team=assigned_team,
     )
+
+    # Generate LLM summary for the ticket (PRD Section 12a)
+    try:
+        from app.services.llm_service import summarize_incident
+        ticket.summary_text = summarize_incident(ticket, event, fixture_obj, zone_obj)
+    except Exception:
+        ticket.summary_text = "[LLM Summary Unavailable - API Key Missing or Service Error]"
+
     return ticket
 
 
