@@ -1,4 +1,4 @@
-// frontend/src/components/TicketKanbanBoard.tsx — View 3: Kanban Ticket Board with shadcn Card/Badge Components
+// frontend/src/components/TicketKanbanBoard.tsx — View 3: Operations Dispatch Kanban Board
 
 import React from 'react';
 import { Kanban, Clock, AlertTriangle, CheckCircle, Play, Eye } from 'lucide-react';
@@ -25,10 +25,10 @@ export const TicketKanbanBoard: React.FC<TicketKanbanBoardProps> = ({
     : tickets;
 
   const columns = [
-    { id: 'open', label: 'OPEN', color: '#e11d48', bg: 'rgba(225, 29, 72, 0.04)' },
-    { id: 'acknowledged', label: 'ACKNOWLEDGED', color: '#d97706', bg: 'rgba(217, 119, 6, 0.04)' },
-    { id: 'in_progress', label: 'IN PROGRESS', color: '#2563eb', bg: 'rgba(37, 99, 235, 0.04)' },
-    { id: 'resolved', label: 'RESOLVED', color: '#059669', bg: 'rgba(5, 150, 105, 0.04)' },
+    { id: 'open', label: 'OPEN', dotClass: 'status-dot-rose', topStrip: '#f87171' },
+    { id: 'acknowledged', label: 'ACKNOWLEDGED', dotClass: 'status-dot-amber', topStrip: '#fbbf24' },
+    { id: 'in_progress', label: 'IN PROGRESS', dotClass: 'status-dot-blue', topStrip: '#60a5fa' },
+    { id: 'resolved', label: 'RESOLVED', dotClass: 'status-dot-emerald', topStrip: '#4ade80' },
   ];
 
   const handleAcknowledge = async (e: React.MouseEvent, ticketId: string) => {
@@ -62,23 +62,21 @@ export const TicketKanbanBoard: React.FC<TicketKanbanBoardProps> = ({
   };
 
   return (
-    <div className="command-panel" style={{ padding: '20px', marginBottom: '20px' }}>
+    <div className="command-panel" style={{ padding: '20px', marginBottom: '24px' }}>
+      {/* 4. Section header: small-caps muted label */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }} className="tech-divider">
         <div style={{ paddingBottom: '12px' }}>
-          <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Kanban size={18} color="#06b6d4" />
-            Operations Ticket Dispatch Board (Kanban)
+          <h2 style={{ fontSize: '0.75rem', fontWeight: 600, color: '#8f8f8f', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Kanban size={14} color="#8f8f8f" />
+            OPERATIONS DISPATCH KANBAN BOARD
           </h2>
-          <p style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>
-            Prioritized tickets sorted by priority_score (PRD §10 formula). Click any card for evidence drill-down.
-          </p>
         </div>
       </div>
 
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(270px, 1fr))',
-        gap: '12px',
+        gap: '14px',
         alignItems: 'start'
       }}>
         {columns.map((col) => {
@@ -90,105 +88,98 @@ export const TicketKanbanBoard: React.FC<TicketKanbanBoardProps> = ({
             <div
               key={col.id}
               style={{
-                background: col.bg,
-                border: `1px solid ${col.color}25`,
-                borderRadius: '3px',
+                background: '#121212',
+                border: '1px solid #262626',
+                borderTop: `4px solid ${col.topStrip}`,
+                borderRadius: '6px',
                 padding: '14px',
                 minHeight: '450px'
               }}
             >
-              {/* Column Header */}
+              {/* 1. Stat / Column Header with small-caps label + large bold count */}
               <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                paddingBottom: '10px',
+                paddingBottom: '12px',
                 marginBottom: '14px',
-                borderBottom: `2px solid ${col.color}`
+                borderBottom: '1px solid #1e1e1e'
               }}>
-                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#f8fafc', letterSpacing: '0.04em' }}>{col.label}</span>
-                <span className="font-mono" style={{
-                  background: `${col.color}20`,
-                  color: col.color,
-                  padding: '2px 7px',
-                  borderRadius: '2px',
-                  fontSize: '0.72rem',
-                  fontWeight: 700
-                }}>
+                <div style={{ fontSize: '0.68rem', fontWeight: 600, color: '#8f8f8f', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span className={`status-dot ${col.dotClass}`} />
+                  {col.label}
+                </div>
+                <div className="font-mono" style={{ fontSize: '1.75rem', fontWeight: 700, color: col.topStrip, marginTop: '2px', lineHeight: 1.1 }}>
                   {colTickets.length}
-                </span>
+                </div>
               </div>
 
-              {/* Column Cards — Migrated to shadcn Card & Badge components */}
+              {/* Column Cards */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {colTickets.length === 0 ? (
-                  <div style={{ padding: '24px 0', textAlign: 'center', color: '#64748b', fontSize: '0.78rem' }}>
-                    NO {col.label} TICKETS
+                  <div style={{ padding: '24px 0', textAlign: 'center', color: '#525252', fontSize: '0.78rem' }}>
+                    No {col.label.toLowerCase()} tickets
                   </div>
                 ) : (
                   colTickets.map((ticket) => {
                     const isTier1 = ticket.zone_id === 'zone-icu' || ticket.zone_id === 'zone-ot';
                     const isTier2 = ticket.zone_id === 'zone-ward';
-
-                    const borderAccent = isTier1 ? '#e11d48' : isTier2 ? '#d97706' : 'var(--panel-border)';
+                    const cardTopStrip = isTier1 ? '#f87171' : isTier2 ? '#fbbf24' : '#262626';
 
                     return (
                       <Card
                         key={ticket.ticket_id}
                         onClick={() => onSelectTicket(ticket)}
-                        className="p-3 cursor-pointer transition-colors duration-150 hover:bg-[#172033]"
+                        className="p-3.5 cursor-pointer transition-all duration-150 hover:bg-[#181818]"
                         style={{
-                          background: 'var(--panel-bg)',
-                          border: `1px solid ${ticket.is_escalated ? '#e11d48' : 'var(--panel-border)'}`,
-                          borderLeft: `3px solid ${borderAccent}`,
-                          borderRadius: '3px',
+                          background: '#161616',
+                          border: `1px solid ${ticket.is_escalated ? 'rgba(248, 113, 113, 0.4)' : '#262626'}`,
+                          borderTop: `3px solid ${cardTopStrip}`,
+                          borderRadius: '6px',
                         }}
                       >
                         {/* Top row */}
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                          <span className="font-mono" style={{ fontSize: '0.7rem', fontWeight: 600, color: '#64748b' }}>
+                          <span className="font-mono" style={{ fontSize: '0.72rem', fontWeight: 500, color: '#8f8f8f' }}>
                             #{ticket.ticket_id.slice(0, 8)}
                           </span>
                           <Badge
                             variant="outline"
-                            className="font-mono text-[0.72rem] font-bold px-1.5 py-0.5 rounded-[2px]"
+                            className="font-mono text-[0.72rem] font-semibold px-2 py-0.5 rounded-[9999px]"
                             style={{
-                              background: ticket.priority_score >= 80 ? 'rgba(225, 29, 72, 0.15)' : 'rgba(6, 182, 212, 0.15)',
-                              color: ticket.priority_score >= 80 ? '#fda4af' : '#22d3ee',
-                              borderColor: ticket.priority_score >= 80 ? 'rgba(225, 29, 72, 0.3)' : 'rgba(6, 182, 212, 0.3)',
+                              background: '#1c1c1c',
+                              color: ticket.priority_score >= 80 ? '#f87171' : '#ededed',
+                              borderColor: '#262626',
                             }}
                           >
-                            {ticket.priority_score.toFixed(1)}
+                            Score {ticket.priority_score.toFixed(1)}
                           </Badge>
                         </div>
 
                         {/* Zone & Escalation */}
-                        <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#f8fafc', marginBottom: '3px' }}>
+                        <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#ededed', marginBottom: '4px' }}>
                           {ticket.zone_id}
                         </div>
 
                         {ticket.is_escalated && (
                           <Badge
                             variant="destructive"
-                            className="tag-tech tag-tier1 font-mono text-[0.62rem] gap-1 mb-1.5"
+                            className="tag-tech tag-tier1 font-mono text-[0.65rem] gap-1 mb-2"
                           >
-                            <AlertTriangle size={10} /> AUTO-ESCALATED (+25)
+                            <AlertTriangle size={10} color="#f87171" /> AUTO-ESCALATED (+25)
                           </Badge>
                         )}
 
                         {/* Team & Summary */}
-                        <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '6px' }}>
-                          Team: <span style={{ color: '#cbd5e1' }}>{ticket.assigned_team || 'General Facilities'}</span>
+                        <div style={{ fontSize: '0.75rem', color: '#8f8f8f', marginBottom: '8px' }}>
+                          Team: <span style={{ color: '#ededed' }}>{ticket.assigned_team || 'General Facilities'}</span>
                         </div>
 
                         {ticket.summary_text && (
                           <div style={{
-                            fontSize: '0.72rem',
-                            color: '#cbd5e1',
-                            background: 'rgba(0,0,0,0.25)',
-                            border: '1px solid var(--panel-border-subtle)',
-                            padding: '5px 7px',
-                            borderRadius: '2px',
+                            fontSize: '0.75rem',
+                            color: '#8f8f8f',
+                            background: '#121212',
+                            border: '1px solid #1e1e1e',
+                            padding: '6px 8px',
+                            borderRadius: '4px',
                             marginBottom: '10px'
                           }}>
                             {ticket.summary_text}
@@ -197,49 +188,50 @@ export const TicketKanbanBoard: React.FC<TicketKanbanBoardProps> = ({
 
                         {/* SLA timer */}
                         {ticket.sla_due && (
-                          <div className="font-mono" style={{ fontSize: '0.68rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '10px' }}>
-                            <Clock size={11} color="#64748b" /> SLA: {new Date(ticket.sla_due).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          <div className="font-mono" style={{ fontSize: '0.7rem', color: '#525252', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '10px' }}>
+                            <Clock size={11} color="#525252" /> SLA: {new Date(ticket.sla_due).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </div>
                         )}
 
-                        {/* Action buttons */}
-                        <div style={{ display: 'flex', gap: '6px', paddingTop: '8px', borderTop: '1px solid var(--panel-border-subtle)' }}>
+                        {/* 3. Action Buttons as Pill-Shaped Buttons */}
+                        <div style={{ display: 'flex', gap: '6px', paddingTop: '8px', borderTop: '1px solid #1e1e1e' }}>
                           {ticket.status === 'open' && (
                             <button
                               onClick={(e) => handleAcknowledge(e, ticket.ticket_id)}
-                              className="btn-action btn-ack"
-                              style={{ flex: 1 }}
+                              className="btn-pill-primary"
+                              style={{ flex: 1, justifyContent: 'center' }}
                             >
-                              ACK
+                              Ack
                             </button>
                           )}
 
                           {(ticket.status === 'open' || ticket.status === 'acknowledged') && (
                             <button
                               onClick={(e) => handleStart(e, ticket.ticket_id)}
-                              className="btn-action btn-start"
-                              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}
+                              className="btn-pill-outline"
+                              style={{ flex: 1, justifyContent: 'center' }}
                             >
-                              <Play size={10} /> START
+                              <Play size={10} /> Start
                             </button>
                           )}
 
                           {(ticket.status === 'acknowledged' || ticket.status === 'in_progress') && (
                             <button
                               onClick={(e) => handleResolve(e, ticket.ticket_id)}
-                              className="btn-action btn-resolve"
-                              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}
+                              className="btn-pill-outline"
+                              style={{ flex: 1, justifyContent: 'center' }}
                             >
-                              <CheckCircle size={10} /> RESOLVE
+                              <CheckCircle size={10} /> Resolve
                             </button>
                           )}
 
                           <button
                             onClick={(e) => { e.stopPropagation(); onSelectTicket(ticket); }}
-                            className="btn-action"
-                            style={{ padding: '4px 8px' }}
+                            className="btn-pill-outline"
+                            style={{ padding: '4px 10px' }}
+                            title="View evidence"
                           >
-                            <Eye size={12} color="#94a3b8" />
+                            <Eye size={12} color="#8f8f8f" />
                           </button>
                         </div>
                       </Card>
@@ -254,3 +246,5 @@ export const TicketKanbanBoard: React.FC<TicketKanbanBoardProps> = ({
     </div>
   );
 };
+
+

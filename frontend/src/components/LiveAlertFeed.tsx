@@ -1,4 +1,4 @@
-// frontend/src/components/LiveAlertFeed.tsx — View 2: Live Alert Feed Stream
+// frontend/src/components/LiveAlertFeed.tsx — View 2: Telemetry Event Ledger Stream
 
 import React, { useState } from 'react';
 import { Activity, Search, ExternalLink } from 'lucide-react';
@@ -32,62 +32,59 @@ export const LiveAlertFeed: React.FC<LiveAlertFeedProps> = ({
   });
 
   return (
-    <div className="command-panel" style={{ padding: '20px', marginBottom: '20px' }}>
+    <div className="command-panel" style={{ padding: '20px', marginBottom: '24px' }}>
+      {/* 4. Section Header: small-caps muted label */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '16px' }} className="tech-divider">
         <div style={{ paddingBottom: '12px' }}>
-          <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Activity size={18} color="#06b6d4" />
-            Live Anomaly & Hydraulic Event Telemetry Ledger
+          <h2 style={{ fontSize: '0.75rem', fontWeight: 600, color: '#8f8f8f', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Activity size={14} color="#8f8f8f" />
+            TELEMETRY ANOMALY LEDGER STREAM
           </h2>
-          <p style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>
-            Real-time telemetry anomaly stream evaluated by layered EWMA, occupancy, and health engine.
-          </p>
         </div>
 
-        {/* Controls */}
+        {/* 3. Controls & Pill Tabs */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '12px' }}>
           {/* Search box */}
           <div style={{ position: 'relative' }}>
-            <Search size={14} color="#64748b" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
+            <Search size={14} color="#8f8f8f" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
             <input
               type="text"
-              placeholder="SEARCH FIXTURE OR ZONE..."
+              placeholder="Filter fixture or zone..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="font-mono"
               style={{
-                background: 'var(--panel-bg)',
-                border: '1px solid var(--panel-border)',
-                borderRadius: '2px',
-                padding: '5px 12px 5px 30px',
+                background: '#141414',
+                border: '1px solid #262626',
+                borderRadius: '9999px',
+                padding: '5px 14px 5px 34px',
                 fontSize: '0.75rem',
-                color: '#f8fafc',
+                color: '#ededed',
                 outline: 'none',
-                width: '210px'
+                width: '220px'
               }}
             />
           </div>
 
-          {/* Event type filter tabs */}
-          <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', padding: '2px', borderRadius: '2px', border: '1px solid var(--panel-border)' }}>
+          {/* Event type filter tabs — Pill style */}
+          <div style={{ display: 'flex', background: '#141414', padding: '3px', borderRadius: '9999px', border: '1px solid #262626', gap: '2px' }}>
             {[
-              { id: 'all', label: 'ALL' },
-              { id: 'leak', label: 'LEAKS' },
-              { id: 'hygiene', label: 'HYGIENE' },
-              { id: 'sensor_fault', label: 'SENSOR FAULTS' },
+              { id: 'all', label: 'All' },
+              { id: 'leak', label: 'Leaks' },
+              { id: 'hygiene', label: 'Hygiene' },
+              { id: 'sensor_fault', label: 'Faults' },
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setFilterType(tab.id)}
-                className="font-mono"
                 style={{
-                  background: filterType === tab.id ? '#06b6d4' : 'transparent',
-                  color: filterType === tab.id ? '#080c14' : '#94a3b8',
+                  background: filterType === tab.id ? '#ffffff' : 'transparent',
+                  color: filterType === tab.id ? '#0a0a0a' : '#8f8f8f',
                   border: 'none',
-                  borderRadius: '2px',
-                  padding: '3px 8px',
-                  fontSize: '0.7rem',
-                  fontWeight: 700,
+                  borderRadius: '9999px',
+                  padding: '3px 12px',
+                  fontSize: '0.75rem',
+                  fontWeight: filterType === tab.id ? 600 : 500,
                   cursor: 'pointer',
                   transition: 'all 0.12s ease'
                 }}
@@ -99,25 +96,25 @@ export const LiveAlertFeed: React.FC<LiveAlertFeedProps> = ({
         </div>
       </div>
 
-      {/* Events Table */}
+      {/* 2. List Rows Table */}
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8125rem' }}>
           <thead>
-            <tr style={{ borderBottom: '1px solid var(--panel-border)', color: '#64748b', fontFamily: 'var(--font-mono)', fontSize: '0.7rem' }}>
-              <th style={{ padding: '8px 12px' }}>TYPE</th>
-              <th style={{ padding: '8px 12px' }}>FIXTURE ID</th>
-              <th style={{ padding: '8px 12px' }}>ZONE & TIER</th>
-              <th style={{ padding: '8px 12px' }}>CONFIDENCE</th>
-              <th style={{ padding: '8px 12px' }}>EVIDENCE READOUT</th>
-              <th style={{ padding: '8px 12px' }}>DISPATCH STATUS</th>
-              <th style={{ padding: '8px 12px' }}>TIMESTAMP (UTC)</th>
-              <th style={{ padding: '8px 12px', textAlign: 'right' }}>ACTION</th>
+            <tr style={{ borderBottom: '1px solid #1e1e1e', color: '#8f8f8f', fontFamily: 'var(--font-mono)', fontSize: '0.72rem' }}>
+              <th style={{ padding: '10px 12px', fontWeight: 500 }}>TYPE</th>
+              <th style={{ padding: '10px 12px', fontWeight: 500 }}>FIXTURE ID</th>
+              <th style={{ padding: '10px 12px', fontWeight: 500 }}>ZONE & TIER</th>
+              <th style={{ padding: '10px 12px', fontWeight: 500 }}>CONFIDENCE</th>
+              <th style={{ padding: '10px 12px', fontWeight: 500 }}>EVIDENCE READOUT</th>
+              <th style={{ padding: '10px 12px', fontWeight: 500 }}>STATUS</th>
+              <th style={{ padding: '10px 12px', fontWeight: 500 }}>TIMESTAMP (UTC)</th>
+              <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 500 }}>ACTION</th>
             </tr>
           </thead>
           <tbody>
             {filteredEvents.length === 0 ? (
               <tr>
-                <td colSpan={8} style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
+                <td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: '#525252' }}>
                   No telemetry detection events match the selected criteria.
                 </td>
               </tr>
@@ -129,7 +126,11 @@ export const LiveAlertFeed: React.FC<LiveAlertFeedProps> = ({
                                     ev.criticality_tier === 'Tier 2' ? 'tag-tier2' :
                                     ev.criticality_tier === 'Tier 3' ? 'tag-tier3' : 'tag-tier4';
 
-                // Format evidence display
+                const dotColorClass = ev.event_type === 'leak' ? 'status-dot-rose' :
+                                      ev.event_type === 'hygiene' ? 'status-dot-cyan' : 'status-dot-amber';
+
+                const typeInitials = ev.event_type === 'leak' ? 'LK' : ev.event_type === 'hygiene' ? 'HY' : 'SF';
+
                 let evidenceDisplay = 'N/A';
                 if (ev.evidence_value !== null && ev.evidence_value !== undefined) {
                   if (ev.event_type === 'leak') {
@@ -137,7 +138,7 @@ export const LiveAlertFeed: React.FC<LiveAlertFeedProps> = ({
                   } else if (ev.event_type === 'hygiene') {
                     evidenceDisplay = `${ev.evidence_value.toFixed(1)}m to breach`;
                   } else if (ev.event_type === 'sensor_fault') {
-                    evidenceDisplay = `Health score ${ev.evidence_value.toFixed(2)}`;
+                    evidenceDisplay = `Health ${ev.evidence_value.toFixed(2)}`;
                   } else {
                     evidenceDisplay = `${ev.evidence_value}`;
                   }
@@ -148,48 +149,58 @@ export const LiveAlertFeed: React.FC<LiveAlertFeedProps> = ({
                     key={ev.event_id}
                     onClick={() => onSelectEvent(ev)}
                     style={{
-                      borderBottom: '1px solid var(--panel-border-subtle)',
+                      borderBottom: '1px solid #1e1e1e',
                       cursor: 'pointer',
                       transition: 'background 0.12s ease'
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--panel-hover)')}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = '#161616')}
                     onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                   >
-                    <td style={{ padding: '8px 12px' }}>
-                      <span className={`tag-tech ${eventTagClass}`}>{ev.event_type}</span>
+                    <td style={{ padding: '12px 12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div className="avatar-circle" style={{ width: '32px', height: '32px', fontSize: '0.7rem' }}>
+                          {typeInitials}
+                        </div>
+                        <span className={`tag-tech ${eventTagClass}`}>
+                          <span className={`status-dot ${dotColorClass}`} />
+                          {ev.event_type}
+                        </span>
+                      </div>
                     </td>
-                    <td style={{ padding: '8px 12px', fontWeight: 600, color: '#f8fafc' }} className="font-mono">
+                    <td style={{ padding: '12px 12px', fontWeight: 600, color: '#ededed' }} className="font-mono">
                       {ev.fixture_id}
-                      {ev.fixture_type && <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block', fontWeight: 400 }}>{ev.fixture_type}</span>}
+                      {ev.fixture_type && <span style={{ fontSize: '0.7rem', color: '#8f8f8f', display: 'block', fontWeight: 400 }}>{ev.fixture_type}</span>}
                     </td>
-                    <td style={{ padding: '8px 12px' }}>
+                    <td style={{ padding: '12px 12px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span>{ev.zone_name || ev.zone_id || 'Unknown'}</span>
                         {ev.criticality_tier && <span className={`tag-tech ${tierTagClass}`}>{ev.criticality_tier}</span>}
                       </div>
                     </td>
-                    <td style={{ padding: '8px 12px' }} className="font-mono">
+                    <td style={{ padding: '12px 12px' }} className="font-mono">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <div style={{ width: '40px', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '1px', overflow: 'hidden' }}>
-                          <div style={{ width: `${ev.confidence_score * 100}%`, height: '100%', background: ev.confidence_score >= 0.8 ? '#059669' : '#d97706' }} />
+                        <div style={{ width: '40px', height: '4px', background: '#262626', borderRadius: '2px', overflow: 'hidden' }}>
+                          <div style={{ width: `${ev.confidence_score * 100}%`, height: '100%', background: ev.confidence_score >= 0.8 ? '#4ade80' : '#fbbf24' }} />
                         </div>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{(ev.confidence_score * 100).toFixed(0)}%</span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>{(ev.confidence_score * 100).toFixed(0)}%</span>
                       </div>
                     </td>
-                    <td style={{ padding: '8px 12px', fontWeight: 700, color: '#22d3ee' }} className="font-mono">
+                    <td style={{ padding: '12px 12px', fontWeight: 600, color: '#ededed' }} className="font-mono">
                       {evidenceDisplay}
                     </td>
-                    <td style={{ padding: '8px 12px' }}>
-                      <span className={`tag-tech ${ev.status === 'dispatched' ? 'tag-tier1' : 'tag-tier2'}`}>
+                    <td style={{ padding: '12px 12px' }}>
+                      <span className="tag-tech" style={{ color: ev.status === 'dispatched' ? '#f87171' : '#8f8f8f' }}>
+                        <span className={`status-dot ${ev.status === 'dispatched' ? 'status-dot-rose' : 'status-dot-amber'}`} />
                         {ev.status}
                       </span>
                     </td>
-                    <td style={{ padding: '8px 12px', color: '#64748b', fontSize: '0.75rem' }} className="font-mono">
+                    <td style={{ padding: '12px 12px', color: '#8f8f8f', fontSize: '0.75rem' }} className="font-mono">
                       {new Date(ev.detected_at).toISOString().replace('T', ' ').slice(0, 19)}
                     </td>
-                    <td style={{ padding: '8px 12px', textAlign: 'right' }}>
-                      <button className="btn-action" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        EVIDENCE <ExternalLink size={10} />
+                    <td style={{ padding: '12px 12px', textAlign: 'right' }}>
+                      {/* 3. Outlined pill action button */}
+                      <button className="btn-pill-outline">
+                        Evidence <ExternalLink size={10} />
                       </button>
                     </td>
                   </tr>
@@ -202,4 +213,6 @@ export const LiveAlertFeed: React.FC<LiveAlertFeedProps> = ({
     </div>
   );
 };
+
+
 
