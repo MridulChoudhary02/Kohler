@@ -1,32 +1,29 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap');
 
 :root {
-  /* Industrial Clinical Console Palette */
-  --console-bg: #080c14;
-  --panel-bg: #0f172a;
-  --panel-hover: #172033;
-  --panel-border: #1e293b;
-  --panel-border-subtle: rgba(255, 255, 255, 0.07);
+  /* Linear & Vercel Near-Black Palette (Zero Blue Undertones) */
+  --console-bg: #0a0a0a;
+  --panel-bg: #121212;
+  --panel-hover: #1c1c1c;
+  --panel-border: #262626;
+  --panel-border-subtle: #1e1e1e;
 
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --text-dim: #64748b;
+  --text-main: #ededed;
+  --text-muted: #8f8f8f;
+  --text-dim: #525252;
 
-  --telemetry-cyan: #06b6d4;
-  --telemetry-cyan-bright: #22d3ee;
+  --accent-primary: #ffffff;
+  --telemetry-cyan: #38bdf8;
   
-  --tier1-crimson: #e11d48;
-  --tier1-crimson-bg: rgba(225, 29, 72, 0.12);
-  --tier2-amber: #d97706;
-  --tier2-amber-bg: rgba(217, 119, 6, 0.12);
-  --tier3-steel: #2563eb;
-  --tier3-steel-bg: rgba(37, 99, 235, 0.12);
-  --tier4-emerald: #059669;
-  --tier4-emerald-bg: rgba(5, 150, 105, 0.12);
+  --tier1-rose: #f87171;
+  --tier2-amber: #fbbf24;
+  --tier3-blue: #60a5fa;
+  --tier4-emerald: #4ade80;
 
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
@@ -53,68 +50,85 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Clinical Command Panels — High Contrast, Crisp Grid Borders */
+/* Clean Surfaces — Linear & Vercel Aesthetic */
 .command-panel {
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
 .command-panel-tier1 {
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);
-  border-left: 3px solid var(--tier1-crimson);
-  border-radius: 4px;
+  border-left: 2px solid var(--tier1-rose);
+  border-radius: 6px;
 }
 
 .command-panel-tier2 {
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);
-  border-left: 3px solid var(--tier2-amber);
-  border-radius: 4px;
+  border-left: 2px solid var(--tier2-amber);
+  border-radius: 6px;
 }
 
-/* Technical Instrumentation Divider */
+/* Hairline Divider */
 .tech-divider {
-  border-bottom: 1px solid var(--panel-border);
+  border-bottom: 1px solid var(--panel-border-subtle);
 }
 
-/* Precision Status Tags */
+/* Discipline Status Tags — Neutral Background, Colored Text / Dot */
 .tag-tech {
   font-family: var(--font-mono);
-  font-size: 0.7rem;
-  font-weight: 600;
-  padding: 2px 6px;
-  border-radius: 2px;
-  letter-spacing: 0.02em;
+  font-size: 0.68rem;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.01em;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--panel-border);
+  color: var(--text-muted);
 }
 
-.tag-tier1 { background: var(--tier1-crimson-bg); color: #fda4af; border: 1px solid rgba(225, 29, 72, 0.3); }
-.tag-tier2 { background: var(--tier2-amber-bg); color: #fde68a; border: 1px solid rgba(217, 119, 6, 0.3); }
-.tag-tier3 { background: var(--tier3-steel-bg); color: #93c5fd; border: 1px solid rgba(37, 99, 235, 0.3); }
-.tag-tier4 { background: var(--tier4-emerald-bg); color: #6ee7b7; border: 1px solid rgba(5, 150, 105, 0.3); }
+.tag-tier1 { color: var(--tier1-rose); border-color: rgba(248, 113, 113, 0.2); }
+.tag-tier2 { color: var(--tier2-amber); border-color: rgba(251, 191, 36, 0.2); }
+.tag-tier3 { color: var(--tier3-blue); border-color: rgba(96, 165, 250, 0.2); }
+.tag-tier4 { color: var(--tier4-emerald); border-color: rgba(74, 222, 128, 0.2); }
 
-.tag-leak { background: rgba(225, 29, 72, 0.15); color: #f87171; border: 1px solid rgba(225, 29, 72, 0.3); }
-.tag-hygiene { background: rgba(6, 182, 212, 0.15); color: #38bdf8; border: 1px solid rgba(6, 182, 212, 0.3); }
-.tag-sensor { background: rgba(217, 119, 6, 0.15); color: #fbbf24; border: 1px solid rgba(217, 119, 6, 0.3); }
+.tag-leak { color: var(--tier1-rose); border-color: rgba(248, 113, 113, 0.2); }
+.tag-hygiene { color: var(--telemetry-cyan); border-color: rgba(56, 189, 248, 0.2); }
+.tag-sensor { color: var(--tier2-amber); border-color: rgba(251, 191, 36, 0.2); }
+
+/* Status Dot Indicators */
+.status-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.status-dot-rose { background-color: var(--tier1-rose); }
+.status-dot-amber { background-color: var(--tier2-amber); }
+.status-dot-blue { background-color: var(--tier3-blue); }
+.status-dot-emerald { background-color: var(--tier4-emerald); }
+.status-dot-cyan { background-color: var(--telemetry-cyan); }
 
 /* Live Beacon Indicator */
 @keyframes beacon-pulse {
   0% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.95); }
+  50% { opacity: 0.4; transform: scale(0.92); }
   100% { opacity: 1; transform: scale(1); }
 }
 
 .beacon-dot {
   display: inline-block;
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background-color: var(--tier1-crimson);
-  animation: beacon-pulse 1.5s infinite ease-in-out;
+  background-color: var(--tier1-rose);
+  animation: beacon-pulse 1.8s infinite ease-in-out;
 }
 
 .beacon-cyan {
@@ -122,66 +136,136 @@ body {
   animation: beacon-pulse 2s infinite ease-in-out;
 }
 
-/* Technical Buttons */
+/* Minimal High-Contrast Buttons */
 .btn-action {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  font-weight: 600;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 500;
   padding: 4px 10px;
-  border-radius: 2px;
+  border-radius: 4px;
   border: 1px solid var(--panel-border);
-  background: rgba(255, 255, 255, 0.04);
+  background: #161616;
   color: var(--text-main);
   cursor: pointer;
   transition: all 0.12s ease-in-out;
 }
 
 .btn-action:hover {
-  background: rgba(255, 255, 255, 0.09);
-  border-color: var(--text-muted);
+  background: #222222;
+  border-color: #3d3d3d;
+  color: #ffffff;
 }
 
-.btn-ack {
-  background: rgba(217, 119, 6, 0.15);
-  border: 1px solid rgba(217, 119, 6, 0.4);
-  color: #fbbf24;
+/* Unified Action Buttons — Consistent Minimal High-Contrast Style */
+.btn-ack, .btn-start, .btn-resolve {
+  background: #181818;
+  border: 1px solid var(--panel-border);
+  color: var(--text-main);
 }
-.btn-ack:hover {
-  background: rgba(217, 119, 6, 0.25);
-}
-
-.btn-start {
-  background: rgba(37, 99, 235, 0.15);
-  border: 1px solid rgba(37, 99, 235, 0.4);
-  color: #60a5fa;
-}
-.btn-start:hover {
-  background: rgba(37, 99, 235, 0.25);
+.btn-ack:hover, .btn-start:hover, .btn-resolve:hover {
+  background: #242424;
+  border-color: #404040;
+  color: #ffffff;
 }
 
-.btn-resolve {
-  background: rgba(5, 150, 105, 0.15);
-  border: 1px solid rgba(5, 150, 105, 0.4);
-  color: #34d399;
+/* Primary High-Contrast CTA Button (Vercel Style) */
+.btn-primary {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 4px;
+  border: 1px solid #ffffff;
+  background: #ffffff;
+  color: #0a0a0a;
+  cursor: pointer;
+  transition: all 0.12s ease-in-out;
 }
-.btn-resolve:hover {
-  background: rgba(5, 150, 105, 0.25);
+
+.btn-primary:hover {
+  background: #e5e5e5;
+  border-color: #e5e5e5;
+}
+
+/* Solid & Outlined Pill Buttons */
+.btn-pill-primary {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 5px 14px;
+  border-radius: 9999px;
+  border: 1px solid #ffffff;
+  background: #ffffff;
+  color: #0a0a0a;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  transition: all 0.12s ease-in-out;
+}
+
+.btn-pill-primary:hover {
+  background: #e5e5e5;
+  border-color: #e5e5e5;
+  color: #0a0a0a;
+}
+
+.btn-pill-outline {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  border: 1px solid var(--panel-border);
+  background: #161616;
+  color: var(--text-main);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  transition: all 0.12s ease-in-out;
+}
+
+.btn-pill-outline:hover {
+  background: #242424;
+  border-color: #404040;
+  color: #ffffff;
+}
+
+/* Circular Avatar Icon Wrapper */
+.avatar-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #181818;
+  border: 1px solid #262626;
+  color: #ededed;
+  font-weight: 600;
+  font-size: 0.75rem;
+  flex-shrink: 0;
 }
 
 /* Custom Scrollbars */
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: var(--console-bg);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--panel-border);
+  background: #262626;
+  border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-dim);
+  background: #3d3d3d;
 }
+
 @layer base {
   :root, .dark {
     --background: var(--console-bg);
@@ -190,20 +274,20 @@ body {
     --card-foreground: var(--text-main);
     --popover: var(--panel-bg);
     --popover-foreground: var(--text-main);
-    --primary: var(--telemetry-cyan);
-    --primary-foreground: #080c14;
-    --secondary: #172033;
+    --primary: var(--accent-primary);
+    --primary-foreground: #0a0a0a;
+    --secondary: #1c1c1c;
     --secondary-foreground: var(--text-main);
-    --muted: #172033;
+    --muted: #1c1c1c;
     --muted-foreground: var(--text-muted);
-    --accent: #172033;
+    --accent: #1c1c1c;
     --accent-foreground: var(--text-main);
-    --destructive: var(--tier1-crimson);
+    --destructive: var(--tier1-rose);
     --destructive-foreground: #ffffff;
     --border: var(--panel-border);
     --input: var(--panel-border);
-    --ring: var(--telemetry-cyan);
-    --radius: 4px;
+    --ring: #ffffff;
+    --radius: 6px;
   }
 }
 @layer base {
@@ -214,4 +298,5 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
 

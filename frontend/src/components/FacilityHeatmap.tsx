@@ -1,7 +1,7 @@
 // frontend/src/components/FacilityHeatmap.tsx — View 1: Facility Zone Heatmap
 
 import React from 'react';
-import { Building2, AlertTriangle, ShieldCheck, Cpu } from 'lucide-react';
+import { Building2 } from 'lucide-react';
 import { Ticket, ZoneTier } from '../lib/types';
 
 interface ZoneMetadata {
@@ -32,33 +32,30 @@ export const FacilityHeatmap: React.FC<FacilityHeatmapProps> = ({
   onSelectZone,
 }) => {
   return (
-    <div className="command-panel" style={{ padding: '20px', marginBottom: '20px' }}>
+    <div className="command-panel" style={{ padding: '20px', marginBottom: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }} className="tech-divider">
         <div style={{ paddingBottom: '12px' }}>
-          <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Building2 size={18} color="#06b6d4" />
-            Facility Criticality Heatmap Matrix
+          <h2 style={{ fontSize: '0.75rem', fontWeight: 600, color: '#8f8f8f', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Building2 size={14} color="#8f8f8f" />
+            Facility Criticality Matrix
           </h2>
-          <p style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>
-            Real-time zone status grouped by hospital criticality tier (PRD §5). Click any zone to filter command board.
-          </p>
         </div>
 
         {selectedZoneId && (
           <button
             onClick={() => onSelectZone(null)}
-            className="btn-action"
+            className="btn-pill-outline"
             style={{ marginBottom: '12px' }}
           >
-            RESET ZONE FILTER
+            Reset zone filter
           </button>
         )}
       </div>
 
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-        gap: '12px'
+        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+        gap: '14px'
       }}>
         {ZONES.map((zone) => {
           const zoneTickets = tickets.filter((t) => t.zone_id === zone.zone_id && t.status !== 'resolved');
@@ -69,60 +66,56 @@ export const FacilityHeatmap: React.FC<FacilityHeatmapProps> = ({
 
           const isSelected = selectedZoneId === zone.zone_id;
 
-          const tagClass = zone.tier === 'Tier 1' ? 'tag-tier1' :
-                           zone.tier === 'Tier 2' ? 'tag-tier2' :
-                           zone.tier === 'Tier 3' ? 'tag-tier3' : 'tag-tier4';
-
-          const borderStyle = isSelected
-            ? '2px solid #06b6d4'
-            : openCount > 0 && zone.tier === 'Tier 1'
-            ? '1px solid #e11d48'
-            : '1px solid var(--panel-border)';
+          const topStripColor = zone.tier === 'Tier 1' ? '#f87171' :
+                                zone.tier === 'Tier 2' ? '#fbbf24' :
+                                zone.tier === 'Tier 3' ? '#60a5fa' : '#4ade80';
 
           return (
             <div
               key={zone.zone_id}
               onClick={() => onSelectZone(isSelected ? null : zone.zone_id)}
               style={{
-                background: isSelected ? 'rgba(6, 182, 212, 0.12)' : 'var(--panel-bg)',
-                border: borderStyle,
-                borderLeft: zone.tier === 'Tier 1' ? '3px solid #e11d48' : zone.tier === 'Tier 2' ? '3px solid #d97706' : '1px solid var(--panel-border)',
-                borderRadius: '3px',
-                padding: '14px',
+                background: isSelected ? '#1c1c1c' : '#141414',
+                border: isSelected ? '1px solid #ffffff' : '1px solid #262626',
+                borderTop: `4px solid ${topStripColor}`,
+                borderRadius: '6px',
+                padding: '16px',
                 cursor: 'pointer',
-                transition: 'background 0.12s ease',
+                transition: 'all 0.12s ease',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span className={`tag-tech ${tagClass}`}>{zone.tier}</span>
-                <span className="font-mono" style={{ fontSize: '0.7rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Cpu size={12} color="#64748b" /> {zone.fixtureCount} FIXTURES
-                </span>
+              {/* 1. Small-caps muted label at top */}
+              <div style={{
+                fontSize: '0.68rem',
+                fontWeight: 600,
+                color: '#8f8f8f',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                marginBottom: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <span>{zone.tier} • {zone.name}</span>
               </div>
 
-              <h3 style={{ fontSize: '0.92rem', fontWeight: 600, color: '#f8fafc', marginBottom: '2px' }}>
-                {zone.name}
-              </h3>
-              <p style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '12px' }}>
-                {zone.description}
-              </p>
+              {/* 2. Large bold number below it */}
+              <div className="font-mono" style={{
+                fontSize: '2rem',
+                fontWeight: 700,
+                color: openCount > 0 ? topStripColor : '#ededed',
+                lineHeight: 1.1,
+                margin: '6px 0 4px 0'
+              }}>
+                {openCount}
+              </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid var(--panel-border-subtle)' }}>
-                <div>
-                  <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>Active Tickets</div>
-                  <div className="font-mono" style={{ fontSize: '0.95rem', fontWeight: 700, color: openCount > 0 ? '#fda4af' : '#34d399', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '1px' }}>
-                    {openCount > 0 ? <AlertTriangle size={14} color="#e11d48" /> : <ShieldCheck size={14} color="#059669" />}
-                    {openCount} OPEN
-                  </div>
-                </div>
-
-                {openCount > 0 && (
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>Max Priority</div>
-                    <div className="font-mono" style={{ fontSize: '1rem', fontWeight: 800, color: maxPriority >= 80 ? '#fda4af' : maxPriority >= 60 ? '#fde68a' : '#93c5fd', marginTop: '1px' }}>
-                      {maxPriority.toFixed(1)}
-                    </div>
-                  </div>
+              {/* 3. Small muted subtitle line */}
+              <div style={{ fontSize: '0.75rem', color: '#8f8f8f', marginTop: '4px' }}>
+                {openCount > 0 ? (
+                  <span>Active tickets (Max priority {maxPriority.toFixed(1)})</span>
+                ) : (
+                  <span>No active tickets • {zone.fixtureCount} fixtures clear</span>
                 )}
               </div>
             </div>
@@ -132,4 +125,6 @@ export const FacilityHeatmap: React.FC<FacilityHeatmapProps> = ({
     </div>
   );
 };
+
+
 

@@ -2,6 +2,7 @@
 
 import './globals.css';
 import React from 'react';
+import { LayoutShell } from '../components/LayoutShell';
 
 export const metadata = {
   title: 'Kohler Smart Facility & Sustainability Manager — Hospital Command Center',
@@ -15,7 +16,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body>{children}</body>
+      <body>
+        <LayoutShell>{children}</LayoutShell>
+      </body>
     </html>
   );
 }
+

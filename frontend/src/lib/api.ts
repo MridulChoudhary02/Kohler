@@ -116,3 +116,17 @@ export async function fetchFixtureTelemetry(
   if (!res.ok) return [];
   return res.json();
 }
+
+export async function sendChatQuery(queryText: string): Promise<{ answer: string }> {
+  const url = `${API_BASE_URL}/api/v1/chat`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query: queryText }),
+  });
+  if (!res.ok) {
+    throw new Error(`Chat query failed: ${res.statusText}`);
+  }
+  return res.json();
+}
+
