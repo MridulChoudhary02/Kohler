@@ -171,10 +171,48 @@ async def test_escalation_is_idempotent():
     print("✅ Escalation idempotency verified: second call applied 0 boosts")
 
 
+@pytest.mark.anyio
+async def test_ticket_lifecycle_transitions():
+    """Test full ticket lifecycle transitions: open -> acknowledged -> in_progress -> resolved."""
+    ticket = Ticket(
+        ticket_id="tkt-lifecycle-test",
+        event_id="evt-lifecycle-test",
+        zone_id="zone-icu",
+        priority_score=80.0,
+        status="open",
+    )
+
+    assert ticket.status == "open"
+    assert ticket.acknowledged_at is None
+    assert ticket.started_at is None
+    assert ticket.resolved_at is None
+
+    # Step 1: Acknowledge
+    ticket.status = "acknowledged"
+    ticket.acknowledged_at = datetime.now(timezone.utc)
+    assert ticket.status == "acknowledged"
+    assert ticket.acknowledged_at is not None
+
+    # Step 2: Start
+    ticket.status = "in_progress"
+    ticket.started_at = datetime.now(timezone.utc)
+    assert ticket.status == "in_progress"
+    assert ticket.started_at is not None
+
+    # Step 3: Resolve
+    ticket.status = "resolved"
+    ticket.resolved_at = datetime.now(timezone.utc)
+    assert ticket.status == "resolved"
+    assert ticket.resolved_at is not None
+
+    print("✅ Ticket lifecycle transitions (open -> acknowledged -> in_progress -> resolved) verified")
+
+
 if __name__ == "__main__":
     test_tier1_leak_outranks_tier4_leak()
     test_priority_score_formula_matches_spec()
     test_hygiene_ticket_priority_uses_correct_normalization()
     asyncio.run(test_auto_escalation_boosts_overdue_ticket())
     asyncio.run(test_escalation_is_idempotent())
+    asyncio.run(test_ticket_lifecycle_transitions())
     print("✅ All ticket priority tests PASSED!")

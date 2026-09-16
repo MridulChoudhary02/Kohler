@@ -1,0 +1,183 @@
+/* frontend/src/app/globals.css — Hospital Facility Command Center Design System */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap');
+
+:root {
+  /* Industrial Clinical Console Palette */
+  --console-bg: #080c14;
+  --panel-bg: #0f172a;
+  --panel-hover: #172033;
+  --panel-border: #1e293b;
+  --panel-border-subtle: rgba(255, 255, 255, 0.07);
+
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+
+  --telemetry-cyan: #06b6d4;
+  --telemetry-cyan-bright: #22d3ee;
+  
+  --tier1-crimson: #e11d48;
+  --tier1-crimson-bg: rgba(225, 29, 72, 0.12);
+  --tier2-amber: #d97706;
+  --tier2-amber-bg: rgba(217, 119, 6, 0.12);
+  --tier3-steel: #2563eb;
+  --tier3-steel-bg: rgba(37, 99, 235, 0.12);
+  --tier4-emerald: #059669;
+  --tier4-emerald-bg: rgba(5, 150, 105, 0.12);
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--console-bg);
+  color: var(--text-main);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Monospace Tabular Readouts */
+.font-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Clinical Command Panels — High Contrast, Crisp Grid Borders */
+.command-panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+}
+
+.command-panel-tier1 {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-left: 3px solid var(--tier1-crimson);
+  border-radius: 4px;
+}
+
+.command-panel-tier2 {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-left: 3px solid var(--tier2-amber);
+  border-radius: 4px;
+}
+
+/* Technical Instrumentation Divider */
+.tech-divider {
+  border-bottom: 1px solid var(--panel-border);
+}
+
+/* Precision Status Tags */
+.tag-tech {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 2px;
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tag-tier1 { background: var(--tier1-crimson-bg); color: #fda4af; border: 1px solid rgba(225, 29, 72, 0.3); }
+.tag-tier2 { background: var(--tier2-amber-bg); color: #fde68a; border: 1px solid rgba(217, 119, 6, 0.3); }
+.tag-tier3 { background: var(--tier3-steel-bg); color: #93c5fd; border: 1px solid rgba(37, 99, 235, 0.3); }
+.tag-tier4 { background: var(--tier4-emerald-bg); color: #6ee7b7; border: 1px solid rgba(5, 150, 105, 0.3); }
+
+.tag-leak { background: rgba(225, 29, 72, 0.15); color: #f87171; border: 1px solid rgba(225, 29, 72, 0.3); }
+.tag-hygiene { background: rgba(6, 182, 212, 0.15); color: #38bdf8; border: 1px solid rgba(6, 182, 212, 0.3); }
+.tag-sensor { background: rgba(217, 119, 6, 0.15); color: #fbbf24; border: 1px solid rgba(217, 119, 6, 0.3); }
+
+/* Live Beacon Indicator */
+@keyframes beacon-pulse {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.95); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.beacon-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--tier1-crimson);
+  animation: beacon-pulse 1.5s infinite ease-in-out;
+}
+
+.beacon-cyan {
+  background-color: var(--telemetry-cyan);
+  animation: beacon-pulse 2s infinite ease-in-out;
+}
+
+/* Technical Buttons */
+.btn-action {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 2px;
+  border: 1px solid var(--panel-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all 0.12s ease-in-out;
+}
+
+.btn-action:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: var(--text-muted);
+}
+
+.btn-ack {
+  background: rgba(217, 119, 6, 0.15);
+  border: 1px solid rgba(217, 119, 6, 0.4);
+  color: #fbbf24;
+}
+.btn-ack:hover {
+  background: rgba(217, 119, 6, 0.25);
+}
+
+.btn-start {
+  background: rgba(37, 99, 235, 0.15);
+  border: 1px solid rgba(37, 99, 235, 0.4);
+  color: #60a5fa;
+}
+.btn-start:hover {
+  background: rgba(37, 99, 235, 0.25);
+}
+
+.btn-resolve {
+  background: rgba(5, 150, 105, 0.15);
+  border: 1px solid rgba(5, 150, 105, 0.4);
+  color: #34d399;
+}
+.btn-resolve:hover {
+  background: rgba(5, 150, 105, 0.25);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: var(--console-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--panel-border);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-dim);
+}
+

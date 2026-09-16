@@ -9,7 +9,7 @@ Endpoints:
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
@@ -17,7 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.models.models import DetectionEvent, Fixture, Zone, Ticket, HygieneCounter
+from app.models.models import DetectionEvent, Fixture, Zone, Ticket, HygieneCounter, BaselineProfile, Sensor, TelemetryReading
 
 router = APIRouter(tags=["Events & Operations"])
 
@@ -54,6 +54,7 @@ class TicketRead(BaseModel):
     is_escalated: bool = False
     summary_text: Optional[str] = None
     acknowledged_at: Optional[datetime] = None
+    started_at: Optional[datetime] = None
     resolved_at: Optional[datetime] = None
 
     class Config:
@@ -69,6 +70,29 @@ class HygieneCounterRead(BaseModel):
     fixture_type: Optional[str] = None
     zone_id: Optional[str] = None
     criticality_tier: Optional[str] = None
+
+class BaselineProfileRead(BaseModel):
+    fixture_id: str
+    mean_off_flow: float
+    std_off_flow: float
+    mean_flush_volume: float
+    mean_flush_duration_s: float
+    ucl: float
+    warmup_complete: bool
+    last_updated: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class TelemetryReadingRead(BaseModel):
+    reading_id: str
+    sensor_id: str
+    timestamp: datetime
+    flow_rate_lpm: float
+    flush_event: int
+    occupancy_state: int
+    diagnostic_status: str
 
     class Config:
         from_attributes = True
@@ -227,6 +251,31 @@ async def acknowledge_ticket(
 
 
 @router.post(
+    "/tickets/{ticket_id}/start",
+    response_model=TicketRead,
+    summary="Start work on ticket",
+    description="Transition ticket status to 'in_progress' with started_at timestamp.",
+)
+async def start_ticket(
+    ticket_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    stmt = select(Ticket).where(Ticket.ticket_id == ticket_id)
+    res = await db.execute(stmt)
+    ticket = res.scalars().first()
+    if not ticket:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Ticket {ticket_id} not found",
+        )
+    ticket.status = "in_progress"
+    ticket.started_at = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(ticket)
+    return ticket
+
+
+@router.post(
     "/tickets/{ticket_id}/resolve",
     response_model=TicketRead,
     summary="Resolve ticket",
@@ -291,3 +340,72 @@ async def list_hygiene_counters(
             )
         )
     return items
+
+
+@router.get(
+    "/fixtures/{fixture_id}/baseline",
+    response_model=BaselineProfileRead,
+    summary="Get baseline profile for fixture",
+    description="Retrieve baseline statistical profile and UCL for a fixture.",
+)
+async def get_fixture_baseline(
+    fixture_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    stmt = select(BaselineProfile).where(BaselineProfile.fixture_id == fixture_id)
+    res = await db.execute(stmt)
+    bp = res.scalars().first()
+    if not bp:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Baseline profile for fixture {fixture_id} not found",
+        )
+    ucl = round(bp.mean_off_flow + 3.0 * bp.std_off_flow, 4)
+    return BaselineProfileRead(
+        fixture_id=bp.fixture_id,
+        mean_off_flow=bp.mean_off_flow,
+        std_off_flow=bp.std_off_flow,
+        mean_flush_volume=bp.mean_flush_volume,
+        mean_flush_duration_s=bp.mean_flush_duration_s,
+        ucl=ucl,
+        warmup_complete=bp.warmup_complete,
+        last_updated=bp.last_updated,
+    )
+
+
+@router.get(
+    "/fixtures/{fixture_id}/telemetry",
+    response_model=List[TelemetryReadingRead],
+    summary="Get recent telemetry readings for fixture",
+    description="Retrieve recent raw telemetry readings emitted by fixture's sensor around a timestamp.",
+)
+async def get_fixture_telemetry(
+    fixture_id: str,
+    detected_at: Optional[str] = Query(None, description="ISO timestamp around which to fetch telemetry"),
+    limit: int = Query(30, ge=1, le=200, description="Max readings to return"),
+    db: AsyncSession = Depends(get_db),
+):
+    # 1. Get sensor_id for fixture_id
+    sensor_stmt = select(Sensor.sensor_id).where(Sensor.fixture_id == fixture_id)
+    sensor_res = await db.execute(sensor_stmt)
+    sensor_id = sensor_res.scalar_one_or_none()
+    if not sensor_id:
+        return []
+
+    stmt = select(TelemetryReading).where(TelemetryReading.sensor_id == sensor_id)
+
+    if detected_at:
+        try:
+            target_dt = datetime.fromisoformat(detected_at.replace('Z', '+00:00'))
+            if target_dt.tzinfo is None:
+                target_dt = target_dt.replace(tzinfo=timezone.utc)
+            start_window = target_dt - timedelta(minutes=15)
+            end_window = target_dt + timedelta(minutes=5)
+            stmt = stmt.where(TelemetryReading.timestamp >= start_window, TelemetryReading.timestamp <= end_window)
+        except Exception:
+            pass
+
+    stmt = stmt.order_by(TelemetryReading.timestamp.asc()).limit(limit)
+    res = await db.execute(stmt)
+    readings = res.scalars().all()
+    return readings
