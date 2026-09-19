@@ -925,3 +925,34 @@ Commit only after I've reviewed the diff and the verification output — do not 
    - Evaluated DOM headings on `http://localhost:3000/tickets`: confirmed `FACILITY CRITICALITY MATRIX` renders above `OPERATIONS DISPATCH KANBAN BOARD`.
    - Ran `npm run build`: compiled successfully with 0 lint or unused-import errors.
    - Verified 20/20 backend unit tests pass cleanly.
+
+---
+
+## [2026-09-19 20:45] — Fix: Separate Dev/Build Output Dirs to Prevent .next Cache Collision
+
+**Trigger:** Diagnosis and permanent fix for Next.js mixed-state bug (unstyled white page + 0 counts due to `npm run build` wiping `.next` while `next dev` was active).
+
+**Prompt/instruction used:**
+Approved — implement both Level A (distDir split) and Level B (prebuild guard).
+After implementing:
+1. Restart next dev cleanly first (rm -rf .next .next-dev && npm run dev) so the site is actually working again right now — confirm with a fresh CDP check that all chunks return 200 and tickets/events render real data again.
+2. Prove the guard works: with npm run dev still running, run npm run build and paste the actual terminal output showing it blocked (not just describe that it should block).
+3. Prove npm run build && npm start still serves a working production build from the correct distDir afterward — I need both dev and prod paths confirmed working, not just dev.
+4. Commit this as its own small commit ("fix: separate dev/build output dirs to prevent .next cache collision") on a new branch, not bundled into unrelated work. Append to PROMPT_LOG.md as usual.
+
+**Action taken:**
+1. Branch created: `fix/separate-next-dist-dir`.
+2. Implemented Level A (distDir separation in `frontend/next.config.mjs`):
+   - Configured `distDir: isDev ? '.next-dev' : '.next'` where `isDev` inspects `NODE_ENV === 'development'` and `npm_lifecycle_event === 'dev'`.
+   - Updated `.gitignore` and `tsconfig.json` to include `.next-dev/`.
+3. Implemented Level B (Prebuild guard in `frontend/package.json`):
+   - Added `"prebuild"` script detecting active `next dev` process via `pgrep -f "next dev"`. Blocks build with exit code 1 if dev server is running concurrently.
+4. Verified Check 1 (Dev mode):
+   - Restarted `next dev` cleanly with `.next-dev/`. All chunks (`layout.css`, `page.js`, `main-app.js`) returned HTTP 200 via Chrome CDP, and dashboard hydrated with real live data (91 open tickets, 3 active, 6 resolved, 13,178.3 L water wasted).
+5. Verified Check 2 (Guard enforcement):
+   - Ran `npm run build` with `next dev` running. Successfully intercepted and blocked build with terminal output:
+     `[ERROR] Build blocked: next dev is currently running on PID(s): 79427. Running next build concurrently risks cache corruption. Please stop the dev server first.`
+6. Verified Check 3 (Prod build & serve):
+   - Stopped dev server, ran `npm run build` (built cleanly into `.next`), and launched `npm start`.
+   - Chrome CDP confirmed production chunks (`ae8273de655f7f86.css`, `main-app-7633a2a6dd4aeca3.js`, etc.) all served with HTTP 200 and full hydration.
+7. Restarted `next dev` background process so development server remains active.
