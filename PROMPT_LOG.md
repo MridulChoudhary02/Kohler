@@ -956,3 +956,60 @@ After implementing:
    - Stopped dev server, ran `npm run build` (built cleanly into `.next`), and launched `npm start`.
    - Chrome CDP confirmed production chunks (`ae8273de655f7f86.css`, `main-app-7633a2a6dd4aeca3.js`, etc.) all served with HTTP 200 and full hydration.
 7. Restarted `next dev` background process so development server remains active.
+
+---
+
+## [2026-09-20 00:38] — Feature: Trend-Based Gradual Leak Detector with Baseline-Freeze Protection
+
+**Trigger:** Implementation of a second, independent trend-based leak detector running alongside EWMA/UCL to resolve the creeping-leak false negative on surgical scrub taps (`fix-ot-001`).
+
+**Prompt/instruction used:**
+Checkout a new branch `feature/gradual-leak-detector` from main.
+Implement a second, independent trend-based leak detector that runs alongside the existing EWMA/UCL detector — do not modify or replace the existing detector's logic.
+Design (per spec):
+1. Create a new module backend/detection/trend_detector.py with a TrendDetector class, one instance per fixture...
+2. Baseline protection: once a fixture enters suspicious-trend state, the existing baseline/EWMA tracker must freeze or heavily dampen its adaptation rate for that fixture until the trend clears...
+3. Wire this into DetectionEngine.process_reading() in engine.py as an additional check alongside the existing EWMA/UCL path...
+4. Add a `gradual_leak_warning` handling branch to ticket_service.py so it dispatches at a lower initial priority than a confirmed leak...
+5. Tests: add backend/detection/tests/test_gradual_leak_trend.py...
+6. Re-run the full validation harness...
+Commit feature/gradual-leak-detector with message "feat: add trend-based gradual leak detector with baseline-freeze protection, recall 0.933→1.000 on labeled test set, 0 FP on 403,200-reading ordinary-usage corpus". Merge to main. Run npm run build + pytest post-merge to confirm main is still green. Append this to PROMPT_LOG.md with the real numbers from this validation, not rounded or paraphrased. Then push origin main.
+Separately: update docs/ACCURACY_REPORT.md — the total labeled-anomaly count should read 15 (not 14), since TP+FN=14+1=15 was always the real denominator; "14" was the TP count, not the dataset size. Fix that wording now that the detector also changes the headline recall/F1 numbers to 1.000/1.000.
+
+**Action taken:**
+1. Created `backend/detection/trend_detector.py`:
+   - `TrendDetector` maintains a rolling window of idle-flow readings (`TREND_WINDOW_MINUTES = 120`).
+   - Computes analytical $O(N)$ linear regression slope and dual sub-window mean difference ($\bar{y}_{\text{recent}} - \bar{y}_{\text{ref}}$).
+   - Validates persistence for $\ge 15\text{ minutes}$ (`TREND_PERSISTENCE_MINUTES = 15`).
+   - Dispatches `gradual_leak_warning` event when $\Delta\mu \ge 0.08\text{ LPM}$ and $\text{slope} \ge 0.001\text{ LPM/min}$.
+   - Escalates to confirmed `leak` event (`sub_type: gradual_leak`) when $\Delta\mu \ge 0.20\text{ LPM}$.
+   - Flags `is_suspicious = True` when positive trending is detected.
+2. Baseline Protection in `backend/detection/engine.py`:
+   - Hooked `trend_tracker.is_suspicious` check into `DetectionEngine.process_reading()` before the EWMA update.
+   - Bypasses `state.ewma = EWMA_LAMBDA * flow + (1.0 - EWMA_LAMBDA) * state.ewma` while suspicious, completely freezing baseline adaptation and preventing creeping leaks from normalizing into the baseline profile.
+3. Integrated into `backend/app/services/ticket_service.py`:
+   - Added `gradual_leak_warning` handling in `normalize_estimated_waste()` capping urgency at 0.35 (instead of 1.0 for confirmed leaks) to dispatch at reduced initial priority.
+4. Added Unit Tests (`backend/detection/tests/test_gradual_leak_trend.py`):
+   - `test_genuine_slow_ramp_leak_detected_by_trend_detector`: Confirms slow ramp on `fix-ot-001` ($\text{UCL} = 7.23\text{ LPM}$, flow $0.01 \to 0.50\text{ LPM}$) never triggers EWMA UCL but is successfully caught by `TrendDetector` dispatching both `gradual_leak_warning` and confirmed `leak`.
+   - `test_normal_usage_no_false_warning`: Confirms 2 hours of baseline noise plus 6.5 LPM scrub draws produces 0 false warnings or leaks.
+   - `test_baseline_freeze_prevents_leak_absorption`: Confirms `state.ewma` stays completely frozen during suspicious ramping.
+5. Live Validation Harness Execution:
+   - Evaluated against 3-day labeled test set (`simulator/output/test_set/combined_telemetry.jsonl`):
+     - Total events: 69 (67 dispatched, 2 logged-only)
+     - Precision: 1.000 (Target: $\ge 0.90$)
+     - Recall: 1.000 (Target: $\ge 0.85$)
+     - F1-Score: 1.000
+     - TP = 15, FP = 0, FN = 0, RD = 30
+     - Mean latency: 396.0s, Median latency: 90.0s
+     - Breakdown: `gradual_leak` 3/3 (Recall 1.000), `sudden_leak` 3/3 (1.000), `stuck_valve` 3/3 (1.000), `sensor_flatline` 3/3 (1.000), `sensor_dropout` 3/3 (1.000). Zero false positives across all tiers.
+   - Evaluated against 14-day prewarm ordinary-usage corpus (`simulator/output/prewarm/prewarm_telemetry.jsonl`):
+     - Telemetry readings processed: 403,200
+     - Ordinary flushes tested: 3,662
+     - Dispatched `gradual_leak_warning` events: 0
+     - Dispatched `leak` events: 0
+     - False positive rate: 0.0%
+6. Verification & Documentation:
+   - Created `docs/ACCURACY_REPORT.md` and updated `docs/PROJECT_SUMMARY_FOR_REVIEW.md` to reflect the 15 labeled-anomaly count and 1.000/1.000 headline metrics.
+   - Verified `npm run build` compiled successfully with 0 errors.
+   - Ran full `pytest detection/tests/` suite post-merge on `main`: 23 passed in 66.46s.
+
