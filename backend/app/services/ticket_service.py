@@ -56,6 +56,9 @@ def normalize_estimated_waste(event_type: str, evidence_value: Optional[float]) 
     if event_type == "leak":
         # 60 L/hr continuous flow represents max waste scale (1.0)
         return min(1.0, max(0.0, val / 60.0))
+    elif event_type == "gradual_leak_warning":
+        # Early trend warning: dampened urgency (0.35 ceiling) compared to confirmed leak
+        return min(0.35, max(0.0, (val / 60.0) * 0.35))
     elif event_type in ("hygiene", "predictive_hygiene"):
         # val is minutes_to_breach. 0 mins = 1.0 max urgency, 30 mins = 0.0
         if val <= 0:

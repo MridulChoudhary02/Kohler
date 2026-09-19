@@ -56,6 +56,7 @@ from detection.baseline import BaselineProfile
 from detection.state import FixtureDetectionState
 from detection.sensor_health import SensorHealthTracker
 from detection.hygiene import HygieneTracker
+from detection.trend_detector import TrendDetector
 
 # ── Config constants (mirrored; keep in sync with app/core/config.py) ─────────
 EWMA_LAMBDA                 = 0.2
@@ -134,6 +135,7 @@ class DetectionEngine:
         self._states: dict[str, FixtureDetectionState] = {}
         self._sensor_health: dict[str, SensorHealthTracker] = {}
         self._hygiene: dict[str, HygieneTracker] = {}
+        self._trend_detectors: dict[str, TrendDetector] = {}
 
         for fid, meta in self._fixture_meta.items():
             bp   = baseline_profiles.get(fid)
@@ -148,6 +150,7 @@ class DetectionEngine:
             )
             self._sensor_health[sid] = SensorHealthTracker(sensor_id=sid, fixture_id=fid, zone_tier=tier)
             self._hygiene[fid]       = HygieneTracker(fixture_id=fid, zone_tier=tier)
+            self._trend_detectors[fid] = TrendDetector(fixture_id=fid, zone_tier=tier)
 
     # ─────────────────────────────────────────────────────────────────────────
     # PUBLIC API
@@ -190,6 +193,13 @@ class DetectionEngine:
             hyg_event = hygiene_tracker.process_reading(reading, warmup_complete=bp.warmup_complete)
             if hyg_event:
                 events.append(hyg_event)
+
+        # ── Trend-Based Gradual Leak Detection ────────────────────────────────
+        trend_tracker = self._trend_detectors.get(fid)
+        if trend_tracker:
+            trend_events = trend_tracker.process_reading(reading, warmup_complete=bp.warmup_complete)
+            if trend_events:
+                events.extend(trend_events)
 
         # ── 0. Dropout check: gap vs. previous reading ────────────────────────
         if state.last_reading_ts is not None:
@@ -281,7 +291,12 @@ class DetectionEngine:
         if diag_status != "ok":
             return events   # other diagnostic states: skip
 
-        state.ewma = EWMA_LAMBDA * flow + (1.0 - EWMA_LAMBDA) * state.ewma
+        # Baseline protection: freeze EWMA adaptation if trend detector flags suspicious ramping
+        if trend_tracker and trend_tracker.is_suspicious:
+            # Creeping leak detected: freeze EWMA to prevent leak from normalizing into baseline
+            pass
+        else:
+            state.ewma = EWMA_LAMBDA * flow + (1.0 - EWMA_LAMBDA) * state.ewma
 
         ucl = bp.ucl
         if state.ewma <= ucl:

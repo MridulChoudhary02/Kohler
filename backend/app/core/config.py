@@ -67,6 +67,20 @@ class Settings(BaseSettings):
     # is definitively anomalous.
     SENSOR_DROPOUT_GAP_S: int = 120
 
+    # ── Trend-Based Gradual Leak Detector ─────────────────────────────────────
+    # Rolling window of idle-flow readings (minutes) for trend slope calculation
+    TREND_WINDOW_MINUTES: int = 120
+    # Minimum duration (minutes) a positive trend must persist continuously before warning
+    TREND_PERSISTENCE_MINUTES: int = 15
+    # Linear regression slope threshold in LPM/min (0.001 LPM/min = +0.06 LPM/hr ramp)
+    TREND_SLOPE_THRESHOLD: float = 0.001
+    # Mean flow differential (recent vs reference sub-window) to trigger gradual_leak_warning
+    TREND_DELTA_WARNING_THRESHOLD: float = 0.08
+    # Mean flow differential to escalate warning to confirmed leak
+    TREND_DELTA_LEAK_THRESHOLD: float = 0.20
+    # Maximum flow rate considered candidate idle flow for trend regression (filters active draws)
+    TREND_IDLE_FLOW_CEILING: float = 2.0
+
     # ── Section 7.5 — Confidence scoring weights ──────────────────────────────
     # confidence = w1×(EWMA deviation, normalised)
     #            + w2×(occupancy cross-check boost, 0 or 1)
