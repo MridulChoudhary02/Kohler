@@ -72,3 +72,17 @@ export interface ZoneSummary {
   max_priority_score: number;
   total_fixtures: number;
 }
+
+export interface FacilityMetrics {
+  total_water_wasted_litres: number;
+  cost_at_risk_inr: number;
+  co2_at_risk_kg: number;
+  sensors_online: number;
+  sensors_total: number;
+  avg_sensor_health_score: number;
+  anomalies_today: number;
+  total_anomalies: number;
+  water_cost_per_litre: number;
+  co2_per_litre: number;
+}
+

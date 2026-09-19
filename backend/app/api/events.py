@@ -13,12 +13,14 @@ from datetime import datetime, timezone, timedelta
 from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import select, func, case
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.models.models import DetectionEvent, Fixture, Zone, Ticket, HygieneCounter, BaselineProfile, Sensor, TelemetryReading
 from app.services.llm_service import summarize_incident, answer_facility_query, FALLBACK_SUMMARY
+from detection.sensor_health import SensorHealthTracker
 
 router = APIRouter(tags=["Events & Operations"])
 
@@ -110,6 +112,19 @@ class ChatQueryResponse(BaseModel):
 class SummaryRegenerateResponse(BaseModel):
     ticket_id: str
     summary_text: str
+
+
+class FacilityMetricsRead(BaseModel):
+    total_water_wasted_litres: float = Field(..., description="Total water wasted across leak events (litres)")
+    cost_at_risk_inr: float = Field(..., description="Estimated cost saved/at risk in INR (₹)")
+    co2_at_risk_kg: float = Field(..., description="Estimated CO2 equivalent at risk in kg")
+    sensors_online: int = Field(..., description="Number of active reporting sensors")
+    sensors_total: int = Field(..., description="Total installed sensors")
+    avg_sensor_health_score: float = Field(..., description="Average sensor health score across facility (0.0 to 1.0)")
+    anomalies_today: int = Field(..., description="Total anomalies detected on active date (leak + hygiene + sensor_fault)")
+    total_anomalies: int = Field(..., description="Total anomalies detected all-time")
+    water_cost_per_litre: float = Field(..., description="Configured water cost conversion factor in ₹/L")
+    co2_per_litre: float = Field(..., description="Configured CO2 conversion factor in kg/L")
 
 
 # ─────────────────────────────────────────────
@@ -481,4 +496,84 @@ async def regenerate_ticket_summary(
         await db.commit()
         await db.refresh(ticket)
     return SummaryRegenerateResponse(ticket_id=ticket.ticket_id, summary_text=ticket.summary_text)
+
+
+@router.get(
+    "/facility/metrics",
+    response_model=FacilityMetricsRead,
+    summary="Get real-time facility sustainability and health metrics",
+    description="Returns real DB-backed sustainability and system-health KPIs (water waste, cost, CO2, sensor online count, sensor health, anomalies today).",
+)
+async def get_facility_metrics(
+    db: AsyncSession = Depends(get_db),
+):
+    # 1. Total water wasted (leak events continuous flow sum)
+    stmt_waste = select(func.coalesce(func.sum(DetectionEvent.evidence_value), 0.0)).where(
+        DetectionEvent.event_type == "leak"
+    )
+    total_water_wasted = float((await db.execute(stmt_waste)).scalar() or 0.0)
+
+    # 2. Sensors online vs total
+    stmt_sensors = select(
+        func.count(Sensor.sensor_id),
+        func.count(case((Sensor.status == "active", 1)))
+    ).select_from(Sensor)
+    res_sensors = (await db.execute(stmt_sensors)).first()
+    sensors_total = res_sensors[0] or 0
+    sensors_active = res_sensors[1] or 0
+
+    # 3. Average sensor health score across facility using rolling window from TelemetryReading
+    sensors_res = (await db.execute(select(Sensor.sensor_id, Sensor.fixture_id))).fetchall()
+    health_scores = []
+    for sid, fid in sensors_res:
+        tracker = SensorHealthTracker(sensor_id=sid, fixture_id=fid)
+        readings = (await db.execute(
+            select(
+                TelemetryReading.timestamp,
+                TelemetryReading.flow_rate_lpm,
+                TelemetryReading.occupancy_state,
+                TelemetryReading.diagnostic_status,
+            )
+            .where(TelemetryReading.sensor_id == sid)
+            .order_by(TelemetryReading.timestamp.desc())
+            .limit(120)
+        )).fetchall()
+        for r in reversed(readings):
+            score, _ = tracker.process_reading({
+                "timestamp": r[0],
+                "flow_rate_lpm": r[1],
+                "occupancy_state": r[2],
+                "diagnostic_status": r[3],
+            })
+        health_scores.append(score)
+
+    avg_health = sum(health_scores) / len(health_scores) if health_scores else 1.0
+
+    # 4. Anomalies today (latest simulation date or today UTC)
+    max_date = (await db.execute(select(func.date(func.max(DetectionEvent.detected_at))))).scalar()
+    stmt_today = select(func.count(DetectionEvent.event_id)).where(
+        func.date(DetectionEvent.detected_at) == max_date
+    )
+    anomalies_today = int((await db.execute(stmt_today)).scalar() or 0)
+    stmt_total_events = select(func.count(DetectionEvent.event_id))
+    total_anomalies = int((await db.execute(stmt_total_events)).scalar() or 0)
+
+    # 5. Sustainability calculations using config conversion factors
+    cost_rate = getattr(settings, "WATER_COST_INR_PER_LITRE", 0.15)
+    co2_rate = getattr(settings, "WATER_CO2_KG_PER_LITRE", 0.0004)
+    cost_at_risk = round(total_water_wasted * cost_rate, 2)
+    co2_at_risk = round(total_water_wasted * co2_rate, 2)
+
+    return FacilityMetricsRead(
+        total_water_wasted_litres=round(total_water_wasted, 2),
+        cost_at_risk_inr=cost_at_risk,
+        co2_at_risk_kg=co2_at_risk,
+        sensors_online=sensors_active,
+        sensors_total=sensors_total,
+        avg_sensor_health_score=round(avg_health, 4),
+        anomalies_today=anomalies_today,
+        total_anomalies=total_anomalies,
+        water_cost_per_litre=cost_rate,
+        co2_per_litre=co2_rate,
+    )
 

@@ -20,8 +20,20 @@ export const CompactTicketsList: React.FC<CompactTicketsListProps> = ({
     ? tickets.filter((t) => t.zone_id === selectedZoneId)
     : tickets;
 
+  const compareTickets = (a: Ticket, b: Ticket) => {
+    const aUnresolved = a.status !== 'resolved';
+    const bUnresolved = b.status !== 'resolved';
+
+    // Unresolved tickets (open, acknowledged, in_progress) always come before resolved tickets
+    if (aUnresolved && !bUnresolved) return -1;
+    if (!aUnresolved && bUnresolved) return 1;
+
+    // Within the same group, sort by priority_score descending
+    return b.priority_score - a.priority_score;
+  };
+
   const top5 = [...filtered]
-    .sort((a, b) => b.priority_score - a.priority_score)
+    .sort(compareTickets)
     .slice(0, 5);
 
   return (

@@ -1,12 +1,13 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { DetectionEvent, Ticket } from './types';
-import { fetchEvents, fetchTickets } from './api';
+import { DetectionEvent, Ticket, FacilityMetrics } from './types';
+import { fetchEvents, fetchTickets, fetchFacilityMetrics } from './api';
 
 interface DashboardContextType {
   events: DetectionEvent[];
   tickets: Ticket[];
+  metrics: FacilityMetrics | null;
   selectedZoneId: string | null;
   selectedEvent: DetectionEvent | null;
   selectedTicket: Ticket | null;
@@ -27,6 +28,7 @@ const DashboardContext = createContext<DashboardContextType | undefined>(undefin
 export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [events, setEvents] = useState<DetectionEvent[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [metrics, setMetrics] = useState<FacilityMetrics | null>(null);
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
 
   // Modal drill-down state
@@ -41,12 +43,17 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const loadData = useCallback(async () => {
     try {
-      const [fetchedEvents, fetchedTickets] = await Promise.all([
+      const [fetchedEvents, fetchedTickets, fetchedMetrics] = await Promise.all([
         fetchEvents({ limit: 100 }),
         fetchTickets({ limit: 100 }),
+        fetchFacilityMetrics().catch((err) => {
+          console.warn('Facility metrics fetch error:', err);
+          return null;
+        }),
       ]);
       setEvents(fetchedEvents);
       setTickets(fetchedTickets);
+      if (fetchedMetrics) setMetrics(fetchedMetrics);
     } catch (err) {
       console.error('Error polling dashboard data:', err);
     }
@@ -81,6 +88,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       value={{
         events,
         tickets,
+        metrics,
         selectedZoneId,
         selectedEvent,
         selectedTicket,
@@ -107,6 +115,7 @@ export function useDashboard(): DashboardContextType {
     return {
       events: [],
       tickets: [],
+      metrics: null,
       selectedZoneId: null,
       selectedEvent: null,
       selectedTicket: null,

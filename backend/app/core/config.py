@@ -24,6 +24,12 @@ class Settings(BaseSettings):
     # Kept for backward compatibility; not required when using Groq
     OPENAI_API_KEY: str = ""
 
+    # ── Sustainability Counter (PRD Section 2) ───────────────────────────────
+    # Commercial institutional water tariff in India: ₹0.15 / Litre (approx ₹150 / kL)
+    WATER_COST_INR_PER_LITRE: float = 0.15
+    # Carbon intensity of municipal water pumping & treatment: 0.0004 kg CO2e / Litre
+    WATER_CO2_KG_PER_LITRE: float = 0.0004
+
     # ── Section 7.1 — Baseline learning ──────────────────────────────────────
     # α for nightly exponentially-weighted baseline update
     BASELINE_ALPHA: float = 0.1

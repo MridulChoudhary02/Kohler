@@ -1,8 +1,17 @@
 // frontend/src/lib/api.ts — API Client Module for Backend Communication
 
-import { DetectionEvent, Ticket, HygieneCounter, BaselineProfile, TelemetryReading } from './types';
+import { DetectionEvent, Ticket, HygieneCounter, BaselineProfile, TelemetryReading, FacilityMetrics } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+export async function fetchFacilityMetrics(): Promise<FacilityMetrics> {
+  const url = `${API_BASE_URL}/api/v1/facility/metrics`;
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch facility metrics: ${res.statusText}`);
+  }
+  return res.json();
+}
 
 export async function fetchEvents(params?: {
   fixture_id?: string;
