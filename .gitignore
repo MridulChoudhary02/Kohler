@@ -11,4 +11,5 @@ build/
 node_modules/
 .next/
 .next-dev/
-simulator/output/
+backend/simulator/output/detection_events.jsonl
+backend/simulator/output/*detection_events*.jsonl
