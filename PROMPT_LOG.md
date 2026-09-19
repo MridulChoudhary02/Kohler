@@ -673,3 +673,200 @@ reimplementing detection logic.
 - [MODIFY] `backend/app/api/telemetry.py`
 - [MODIFY] `backend/app/api/events.py`
 - [MODIFY] `PROMPT_LOG.md`
+
+
+---
+
+## [2026-09-16 00:15] — Phase 5: Merge phase-5-ticket-dispatch into main and cleanup branch
+
+**Trigger:** Completion and verification of Phase 5 Ticket Priority & Dispatch engine.
+
+**Action taken:**
+1. Ran full test suite (15/15 unit tests passing in `detection/tests/`).
+2. Merged branch `phase-5-ticket-dispatch` into `main` using `--no-ff` (Merge commit `38a3cb9`).
+3. Deleted local and remote `phase-5-ticket-dispatch` branch.
+
+
+---
+
+## [2026-09-16 11:45] — Phase 6: Hospital Operations Dashboard
+
+**Trigger:** PRD Section 11 implementation prompt (Phase 6: Frontend & Full Operations Dashboard).
+
+**Prompt/instruction used:** Create branch `phase-6-dashboard`. Build the Next.js frontend console for the hospital facility command center. Implement: (1) Facility Heatmap grouping zones by criticality tier (ICU, Operating Theatres, General Ward, Lab/Scrub, Lobby), (2) Live Alert Feed displaying recent anomalies with severity tags, (3) Ticket Kanban Board with 4 columns (`open`, `acknowledged`, `in_progress`, `resolved`) with lifecycle actions (Ack, Start, Resolve), (4) Evidence Drill-Down modal displaying telemetry chart and baseline UCL/mean limits for flagged fixtures, (5) Sustainability counter aggregating estimated water waste across active leaks. Extend backend API with necessary endpoints and timestamps.
+
+**Action taken:**
+1. Created branch `phase-6-dashboard` from `main`.
+2. Backend extensions:
+   - Added DB migration for `started_at` column on `Ticket` model.
+   - Added `POST /api/v1/tickets/{id}/start` endpoint to support full 4-stage lifecycle transition (`open` -> `acknowledged` -> `in_progress` -> `resolved`).
+   - Added `GET /api/v1/fixtures/{id}/telemetry` and `GET /api/v1/fixtures/{id}/baseline` endpoints to power real telemetry sparklines and UCL threshold visualization in the drill-down modal.
+3. Frontend Next.js build:
+   - Created `DashboardContext.tsx` with 10-second polling against `/api/v1/events` and `/api/v1/tickets`.
+   - Built `FacilityHeatmap.tsx`: Interactive zone cards grouped by Tier 1–4, showing active ticket counts, highest priority score, and zone selection filter.
+   - Built `LiveAlertFeed.tsx`: Chronological stream of detection events with type tags (`leak`, `hygiene`, `sensor_fault`) and timestamps.
+   - Built `TicketKanbanBoard.tsx`: Kanban view with drag/click transitions for Ack, Start, and Resolve.
+   - Built `FixtureDrillDownModal.tsx`: Detailed modal overlay displaying fixture metadata, computed evidence values, baseline control limits (mean off-flow, UCL), and recent telemetry trend readings.
+   - Built `Header.tsx`: Facility header with live aggregated hydraulic waste rate (L/hr) readout and status counts.
+4. Validated end-to-end against live 55-ticket simulation dataset; verified 16/16 backend tests passing.
+5. Merged into `main` via merge commit `4a73908` (commit `100e0a4`).
+
+
+---
+
+## [2026-09-16 13:46] — Phase 7: LLM Incident Summarization + Chat-over-Data
+
+**Trigger:** PRD Section 12 implementation prompt (Phase 7: LLM Layer).
+
+**Prompt/instruction used:** Create branch `phase-7-llm-layer`. Implement PRD Section 12a (Incident Summarization) and Section 12b (Chat-over-Data Query Interface). Ground summaries strictly on deterministic event/fixture/zone fields. Pre-aggregate database statistics in Python/SQL so the LLM narrates real numbers rather than generating SQL or hallucinating raw rows. Configure litellm provider with fallback handling for missing API keys. Wire ticket creation to automatically generate summaries, and provide an endpoint to regenerate summaries on demand.
+
+**Action taken:**
+1. Created branch `phase-7-llm-layer` from `main`.
+2. Created `backend/app/services/llm_service.py`:
+   - `summarize_incident()`: Formats a structured system/user prompt containing ticket priority score, zone name, criticality tier, fixture type, event type, confidence score, and evidence value. Calls LiteLLM to produce a concise, 1-paragraph operational brief.
+   - `answer_facility_query()`: Evaluates facility queries against pre-aggregated SQL metrics (total active leaks, per-zone estimated waste L/hr, open tickets count, overdue tickets) and formats the grounded numbers for the LLM to narrate.
+3. Switched model provider to Groq free tier (`openai/gpt-oss-120b` via LiteLLM) using `GROQ_API_KEY` for high-speed inference without credit card dependencies.
+4. Added API endpoints in `backend/app/api/events.py`:
+   - `POST /api/v1/chat`: Natural language query endpoint returning grounded assistant response.
+   - `POST /api/v1/tickets/{id}/summary/regenerate`: On-demand LLM summary regeneration for any ticket.
+5. Unit and integration tests:
+   - Created `backend/detection/tests/test_llm_service.py` with 4 tests: structured summary generation, fallback behavior when API key is missing, chat query aggregation grounding, and live-API integration test.
+6. Bugs found & fixed:
+   - **Sensor fault evidence mapping:** Fixed bug where sensor fault events reported raw sensor health score rather than inverted severity in LLM context; aligned with Section 10 normalization.
+   - **Hardcoded value catch:** Caught and replaced hardcoded demo aggregates in early prototype with live SQL `func.sum()` queries over `DetectionEvent` and `Ticket` tables. Verified per-zone leak waste rankings matched direct PostgreSQL SQL queries to 2 decimal places.
+7. Verified 20/20 backend tests passing; merged into `main` via merge commit `7b3e202` (commit `1b7c73f`).
+
+
+---
+
+## [2026-09-16 14:19] — Phase 6b: shadcn/ui Foundation Migration
+
+**Trigger:** Design system modernization prompt.
+
+**Prompt/instruction used:** Check out branch `phase-6b-shadcn-migration`. Initialize shadcn/ui (Tailwind CSS, components.json, New York style) into the existing Next.js frontend without disturbing the industrial console design tokens. Remap shadcn's CSS variables to reference the existing `--console-bg`, `--panel-bg`, `--telemetry-cyan`, and tier color palette so shadcn components inherit the dark hospital command center theme automatically. Pilot the migration on `TicketKanbanBoard.tsx`.
+
+**Action taken:**
+1. Created branch `phase-6b-shadcn-migration` from `main`.
+2. Initialized `components.json` and Tailwind CSS configuration (`tailwind.config.ts`, `postcss.config.mjs`).
+3. Remapped shadcn CSS variables in `globals.css` to bind directly to existing console tokens:
+   - `--background` -> `var(--console-bg)` (`#080c14`)
+   - `--card` -> `var(--panel-bg)` (`#0f172a`)
+   - `--destructive` -> `var(--tier1-crimson)` (`#e11d48`)
+   - `--border` -> `var(--panel-border)` (`#1e293b`)
+4. Installed initial UI primitives: `Badge` (`components/ui/badge.tsx`), `Card` (`components/ui/card.tsx`).
+5. Piloted migration in `TicketKanbanBoard.tsx`: Replaced custom ticket pill tags and score badges with shadcn `Badge` variants, verified visually identical to hand-rolled styling.
+6. Verified frontend builds cleanly (`npm run build`); merged into `main` via merge commit `c1a4534` (commit `2c80d65`).
+
+
+---
+
+## [2026-09-16 20:16] — Phase 8: UI Redesign, Multi-Page Structure & Hydration Fixes
+
+**Trigger:** Frontend multi-page structure and Linear/Vercel dark aesthetic overhaul prompt.
+
+**Prompt/instruction used:** Overhaul the frontend UI into a multi-page command center: `/` (Overview with Heatmap, top 5 tickets, recent alerts), `/tickets` (full Kanban board), `/alerts` (full live feed), and `/chat` (facility intelligence chat interface). Apply Linear/Vercel-inspired dark theme, top-border accent stat cards, and wire chat to `POST /api/v1/chat`. Fix any build and hydration warnings.
+
+**Action taken:**
+1. Created branch `phase-8-ui-redesign` from `main`.
+2. Multi-page routing restructuring:
+   - Created `app/tickets/page.tsx`: Dedicated full-width Kanban board.
+   - Created `app/alerts/page.tsx`: Full-screen live telemetry anomaly feed with filtering.
+   - Created `app/chat/page.tsx`: Dedicated interactive conversational interface with starter query buttons.
+   - Updated `app/page.tsx`: Compact overview landing page containing `FacilityHeatmap`, `CompactTicketsList`, and `CompactAlertsList`.
+   - Updated `Header.tsx`: Navigation bar with active route highlighting across all 4 views.
+3. Industrial aesthetic polish:
+   - Added subtle top-border color strips on Kanban cards based on tier urgency.
+   - Standardized monospace font tabular figures (`JetBrains Mono`) for all metrics and timestamps.
+4. Real debugging issues encountered & fixed:
+   - **CSS @import ordering bug (`812814f`):** The `@import url('https://fonts.googleapis.com/...')` for Google Fonts was placed after `@tailwind` directives in `globals.css`. PostCSS/Webpack threw a CSS syntax error during build, preventing client bundles from executing and causing all pages to render blank/zero-data state. Fixed by moving font `@import` to the very top of `globals.css`.
+   - **Hydration mismatch bug (`46d90d1`):** `toLocaleTimeString()` rendered server-side in UTC and client-side in local browser timezone, producing React hydration mismatch warnings on `/alerts` and `/chat`. Fixed by introducing a client-only `mounted` state flag in `app/chat/page.tsx` and using deterministic UTC string slicing (`detected_at.slice(11, 16)`) in `CompactAlertsList.tsx`.
+5. Verified 0 console errors and clean production build (`npm run build`). Merged into `main` via merge commit `3060668` (commits `812814f`, `46d90d1`).
+
+
+---
+
+## [2026-09-19 16:48] — LLM Summary Fallback Bugfix & Kanban Narrative Truncation
+
+**Trigger:** User report of tickets showing fallback string `[LLM Summary Unavailable - API Key Missing or Service Error]` and Kanban cards appearing cluttered with multi-sentence narratives.
+
+**Prompt/instruction used:** 
+1. Check whether `GROQ_API_KEY` is visible to the backend process.
+2. Find every Ticket row where `summary_text = '[LLM Summary Unavailable - API Key Missing or Service Error]'` and regenerate using `POST /api/v1/tickets/{id}/summary/regenerate`.
+3. Going forward, do NOT persist fallback error strings in `summary_text` when LLM calls fail — leave `summary_text` as `NULL` instead so the frontend shows "Summary pending" and stays eligible for retry.
+4. Shorten ticket cards on `/tickets`: truncate summary to 1 line (~80 chars + `...`) and keep the full narrative in the drill-down modal only.
+
+**Action taken:**
+1. Verified `GROQ_API_KEY`: Key was present and non-empty; confirmed with a live Groq API test call.
+2. Identified 22 tickets in PostgreSQL containing the literal fallback error string; ran regeneration loop against `http://localhost:8000/api/v1/tickets/{id}/summary/regenerate`. All 22 tickets were successfully regenerated with real Groq summaries.
+3. Code fix in `backend/app/services/ticket_service.py` and `backend/app/api/events.py`:
+   - Changed fallback handling: If `summarize_incident()` returns `FALLBACK_SUMMARY` or raises an exception, `ticket.summary_text` is set to `None` (`NULL` in DB) rather than storing error messages as fake data.
+4. Truncated Kanban cards in `frontend/src/components/TicketKanbanBoard.tsx`:
+   - Applied `ticket.summary_text.slice(0, 80) + '...'` with CSS `white-space: nowrap; overflow: hidden; text-overflow: ellipsis;` and tooltip hover. Full narrative remains accessible in `FixtureDrillDownModal.tsx`.
+5. Committed to `main` via commit `a5a7b4a`.
+
+
+---
+
+## [2026-09-19 17:04] — Feature: Copilot Side-Out Panel & Global Drawer Integration
+
+**Trigger:** User prompt instruction (Part 3: Copilot side panel).
+
+**Prompt/instruction used:** Create branch `feature/copilot-panel`. Convert the chat interface from a standalone page (`/chat`) into a slide-out drawer that overlays whichever page you are currently viewing (Notion/Vercel style), triggered by a floating button bottom-right or nav tab. Rename "Chat" to "Copilot" in navigation. Keep all existing functionality (`POST /api/v1/chat`, starter queries). Verify build and merge cleanly.
+
+**Action taken:**
+1. Created branch `feature/copilot-panel` from `main`.
+2. Created `frontend/src/components/CopilotDrawer.tsx`:
+   - 460px slide-out side panel with smooth transition from right edge.
+   - Glassmorphic backdrop (`rgba(0,0,0,0.65)`, `backdrop-filter: blur(4px)`) dismissible via backdrop click, `X` button, or <kbd>Esc</kbd> key.
+   - Added global hotkey <kbd>⌘K</kbd> / <kbd>Ctrl+K</kbd> to toggle panel from anywhere.
+   - Integrated starter query pills, session-persisted message log, and conversational reset.
+3. Created `frontend/src/components/CopilotFloatingTrigger.tsx`:
+   - Pinned floating pill button at `bottom: 24px, right: 24px` with emerald Sparkles icon and <kbd>⌘K</kbd> shortcut indicator. Smoothly fades when drawer is active.
+4. Updated `frontend/src/components/Header.tsx`: Replaced `/chat` link with "Copilot" drawer trigger tab featuring an `AI` pill badge.
+5. Updated `frontend/src/lib/DashboardContext.tsx` & `LayoutShell.tsx`: Added `isCopilotOpen`, `openCopilot`, `closeCopilot`, `toggleCopilot` to global state; mounted drawer and floating button at root layout.
+6. Updated `frontend/src/app/chat/page.tsx`: Redirects to `/` while automatically opening the Copilot drawer.
+7. Verified 20/20 backend tests and frontend build (`npm run build`). Committed on branch (`e7638ce`), merged into `main` via merge commit `5e08587`, and cleaned up branch.
+
+
+---
+
+## [2026-09-19 17:24] — Zero-Data Dashboard Root-Cause Investigation & React Rules of Hooks Fix
+
+**Trigger:** User reported the dashboard rendered zero data (0 waste rate, 0 tickets) after the Copilot merge, despite the backend serving 110 real tickets.
+
+**Prompt/instruction used:** Investigate why the dashboard renders blank: (1) Show full `DashboardContext.tsx`, (2) Inspect DevTools console output, (3) Confirm whether the browser is actually dispatching requests to `/api/v1/tickets` and `/api/v1/events`, (4) Compare diff of `DashboardContext.tsx` against pre-Copilot commit `46d90d1`.
+
+**Action taken:**
+1. Verified `DashboardContext.tsx` diff against `46d90d1`: Confirmed `loadData()`, polling `useEffect`, and API calls were 100% identical and untouched.
+2. Traced browser execution using Chrome DevTools Protocol (CDP):
+   - Found that the browser was dispatching **zero** network requests to `/api/v1/*`.
+   - Discovered that all client JavaScript bundles (`main-app.js`, `app/page.js`, `app/layout.js`) were returning **`HTTP 404 Not Found`** from the Next.js dev server.
+3. **Root cause diagnosed:** Running `npm run build` during merge verification in the same directory where `npm run dev` was running as a background daemon wiped `.next/` with production chunk hashes. The running dev server's in-memory router attempted to serve old dev chunk hashes from disk, resulting in 404s for all JS files. Because client JS never loaded, React never hydrated, `useEffect` never mounted, and polling never ran.
+4. **React Rules of Hooks bug identified in `CopilotDrawer.tsx`:** In the keydown handler callback, `useDashboard().openCopilot()` was being invoked inside `handleKeyDown`, violating the Rules of Hooks. Fixed by destructuring `openCopilot` alongside `closeCopilot` at the top level of `CopilotDrawer`.
+5. Cleared stale `.next` directory (`rm -rf .next`) and restarted clean `next dev` server.
+6. Re-verified via CDP: JS bundles loaded with HTTP 200, React hydrated, network requests dispatched (`GET /api/v1/events?limit=100`, `GET /api/v1/tickets?limit=100`), and dashboard populated live: 91 open tickets, 13,178.2 L/hr flagged waste.
+7. Ran 20/20 backend tests, verified production build, and committed fix to `main` via commit `c13c8a7`.
+
+
+---
+
+## [2026-09-19 17:37] — Groq 30-RPM Rate Limit Diagnosis & Full 52-Ticket Summary Backfill
+
+**Trigger:** Investigation into why 52 tickets still displayed "Summary pending" (NULL `summary_text`).
+
+**Prompt/instruction used:** Query database counts for NULL vs non-NULL summaries. Test manual regeneration on 3 NULL tickets one-at-a-time with a 3–5 second pause. Diagnose if failures were caused by rate limiting, and execute a full backfill across all remaining NULL tickets with throttling.
+
+**Action taken:**
+1. Database audit: Confirmed 55 NULL / 55 populated summaries across 110 total tickets.
+2. Manual regeneration test: Successfully regenerated 3 NULL tickets one-at-a-time with 4-second pauses (`e1a59be2`, `cac734c2`, `0bb0aecf`). All 3 returned `HTTP 200 OK` with detailed summaries.
+3. **Root cause diagnosed:** Initial bulk telemetry replay ingested 110 tickets almost simultaneously. Groq's free tier enforces a strict **30 Requests Per Minute (RPM)** rate limit. When 110 events hit the API unthrottled, LiteLLM caught 429 rate limit exceptions, leaving half the tickets with NULL summaries.
+4. **Automated throttled backfill:** Ran a Python backfill script looping through the remaining 52 NULL tickets with a 2.5-second sleep between requests (`52 × 2.5s ≈ 130s`).
+   - Results: **52 / 52 succeeded (100%)** with 0 rate limit failures or errors.
+5. Re-queried database to verify final state:
+   ```sql
+   SELECT COUNT(*) FROM tickets WHERE summary_text IS NULL;     -- 0
+   SELECT COUNT(*) FROM tickets WHERE summary_text IS NOT NULL; -- 110
+   SELECT COUNT(*) FROM tickets WHERE summary_text LIKE '%[LLM Summary%'; -- 0
+   ```
+   100% of tickets across all facility tiers now have real, grounded incident summaries.
+
