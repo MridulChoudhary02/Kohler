@@ -5,7 +5,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Droplets, LayoutDashboard, Ticket as TicketIcon, Bell, MessageSquare } from 'lucide-react';
+import { Droplets, LayoutDashboard, Ticket as TicketIcon, Bell, Sparkles } from 'lucide-react';
 import { useDashboard } from '../lib/DashboardContext';
 import { DetectionEvent, Ticket } from '../lib/types';
 
@@ -34,7 +34,6 @@ export const Header: React.FC<HeaderProps> = (props) => {
     { href: '/', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/tickets', label: 'Tickets', icon: TicketIcon },
     { href: '/alerts', label: 'Alerts', icon: Bell },
-    { href: '/chat', label: 'Chat', icon: MessageSquare },
   ];
 
 
@@ -192,6 +191,50 @@ export const Header: React.FC<HeaderProps> = (props) => {
             </Link>
           );
         })}
+
+        {/* Copilot Drawer Trigger Tab in Nav */}
+        <button
+          onClick={dashboard.toggleCopilot}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px 16px',
+            fontSize: '0.8125rem',
+            fontWeight: dashboard.isCopilotOpen ? 600 : 500,
+            color: dashboard.isCopilotOpen ? '#4ade80' : '#8f8f8f',
+            background: dashboard.isCopilotOpen ? '#1c1c1c' : 'transparent',
+            borderTopLeftRadius: '6px',
+            borderTopRightRadius: '6px',
+            border: dashboard.isCopilotOpen ? '1px solid #262626' : '1px solid transparent',
+            borderBottom: dashboard.isCopilotOpen ? '1px solid #1c1c1c' : '1px solid transparent',
+            marginBottom: '-1px',
+            cursor: 'pointer',
+            transition: 'all 0.12s ease',
+          }}
+          onMouseEnter={(e) => {
+            if (!dashboard.isCopilotOpen) e.currentTarget.style.color = '#ededed';
+          }}
+          onMouseLeave={(e) => {
+            if (!dashboard.isCopilotOpen) e.currentTarget.style.color = '#8f8f8f';
+          }}
+        >
+          <Sparkles size={14} color={dashboard.isCopilotOpen ? '#4ade80' : '#8f8f8f'} />
+          Copilot
+          <span
+            style={{
+              fontSize: '0.62rem',
+              fontFamily: 'var(--font-mono)',
+              padding: '1px 5px',
+              borderRadius: '4px',
+              background: 'rgba(74, 222, 128, 0.1)',
+              color: '#4ade80',
+              border: '1px solid rgba(74, 222, 128, 0.2)',
+            }}
+          >
+            AI
+          </span>
+        </button>
       </div>
     </header>
   );

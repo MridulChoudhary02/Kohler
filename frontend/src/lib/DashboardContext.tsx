@@ -15,6 +15,11 @@ interface DashboardContextType {
   handleOpenEventModal: (event: DetectionEvent) => void;
   handleOpenTicketModal: (ticket: Ticket) => void;
   handleCloseModal: () => void;
+  isCopilotOpen: boolean;
+  setIsCopilotOpen: (open: boolean) => void;
+  openCopilot: () => void;
+  closeCopilot: () => void;
+  toggleCopilot: () => void;
 }
 
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
@@ -27,6 +32,12 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   // Modal drill-down state
   const [selectedEvent, setSelectedEvent] = useState<DetectionEvent | null>(null);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+
+  // Copilot drawer state
+  const [isCopilotOpen, setIsCopilotOpen] = useState<boolean>(false);
+  const openCopilot = useCallback(() => setIsCopilotOpen(true), []);
+  const closeCopilot = useCallback(() => setIsCopilotOpen(false), []);
+  const toggleCopilot = useCallback(() => setIsCopilotOpen((prev) => !prev), []);
 
   const loadData = useCallback(async () => {
     try {
@@ -78,6 +89,11 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         handleOpenEventModal,
         handleOpenTicketModal,
         handleCloseModal,
+        isCopilotOpen,
+        setIsCopilotOpen,
+        openCopilot,
+        closeCopilot,
+        toggleCopilot,
       }}
     >
       {children}
@@ -99,6 +115,11 @@ export function useDashboard(): DashboardContextType {
       handleOpenEventModal: () => {},
       handleOpenTicketModal: () => {},
       handleCloseModal: () => {},
+      isCopilotOpen: false,
+      setIsCopilotOpen: () => {},
+      openCopilot: () => {},
+      closeCopilot: () => {},
+      toggleCopilot: () => {},
     };
   }
   return context;
