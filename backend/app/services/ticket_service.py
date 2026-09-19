@@ -151,10 +151,11 @@ async def create_ticket_from_event(
 
     # Generate LLM summary for the ticket (PRD Section 12a)
     try:
-        from app.services.llm_service import summarize_incident
-        ticket.summary_text = summarize_incident(ticket, event, fixture_obj, zone_obj)
+        from app.services.llm_service import summarize_incident, FALLBACK_SUMMARY
+        summary = summarize_incident(ticket, event, fixture_obj, zone_obj)
+        ticket.summary_text = summary if summary != FALLBACK_SUMMARY else None
     except Exception:
-        ticket.summary_text = "[LLM Summary Unavailable - API Key Missing or Service Error]"
+        ticket.summary_text = None
 
     return ticket
 

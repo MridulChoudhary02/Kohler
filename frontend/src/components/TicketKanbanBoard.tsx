@@ -173,16 +173,24 @@ export const TicketKanbanBoard: React.FC<TicketKanbanBoardProps> = ({
                         </div>
 
                         {ticket.summary_text && (
-                          <div style={{
-                            fontSize: '0.75rem',
-                            color: '#8f8f8f',
-                            background: '#121212',
-                            border: '1px solid #1e1e1e',
-                            padding: '6px 8px',
-                            borderRadius: '4px',
-                            marginBottom: '10px'
-                          }}>
-                            {ticket.summary_text}
+                          <div
+                            title={ticket.summary_text}
+                            style={{
+                              fontSize: '0.75rem',
+                              color: '#8f8f8f',
+                              background: '#121212',
+                              border: '1px solid #1e1e1e',
+                              padding: '6px 8px',
+                              borderRadius: '4px',
+                              marginBottom: '10px',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
+                            {ticket.summary_text.length > 80
+                              ? `${ticket.summary_text.slice(0, 80)}...`
+                              : ticket.summary_text}
                           </div>
                         )}
 

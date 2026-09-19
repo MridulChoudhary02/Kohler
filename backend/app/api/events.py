@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.models.models import DetectionEvent, Fixture, Zone, Ticket, HygieneCounter, BaselineProfile, Sensor, TelemetryReading
-from app.services.llm_service import summarize_incident, answer_facility_query
+from app.services.llm_service import summarize_incident, answer_facility_query, FALLBACK_SUMMARY
 
 router = APIRouter(tags=["Events & Operations"])
 
@@ -476,8 +476,9 @@ async def regenerate_ticket_summary(
             fixture_obj, zone_obj = fz_row
 
     summary = summarize_incident(ticket, event, fixture_obj, zone_obj)
-    ticket.summary_text = summary
-    await db.commit()
-    await db.refresh(ticket)
-    return SummaryRegenerateResponse(ticket_id=ticket.ticket_id, summary_text=summary)
+    if summary != FALLBACK_SUMMARY:
+        ticket.summary_text = summary
+        await db.commit()
+        await db.refresh(ticket)
+    return SummaryRegenerateResponse(ticket_id=ticket.ticket_id, summary_text=ticket.summary_text)
 
