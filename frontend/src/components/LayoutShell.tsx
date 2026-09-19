@@ -4,6 +4,8 @@ import React from 'react';
 import { DashboardProvider, useDashboard } from '../lib/DashboardContext';
 import { Header } from './Header';
 import { FixtureDrillDownModal } from './FixtureDrillDownModal';
+import { CopilotDrawer } from './CopilotDrawer';
+import { CopilotFloatingTrigger } from './CopilotFloatingTrigger';
 
 function ShellInner({ children }: { children: React.ReactNode }) {
   const { selectedEvent, selectedTicket, handleCloseModal } = useDashboard();
@@ -19,6 +21,8 @@ function ShellInner({ children }: { children: React.ReactNode }) {
         ticket={selectedTicket}
         onClose={handleCloseModal}
       />
+      <CopilotFloatingTrigger />
+      <CopilotDrawer />
     </div>
   );
 }
