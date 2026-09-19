@@ -1012,4 +1012,5 @@ Separately: update docs/ACCURACY_REPORT.md — the total labeled-anomaly count s
    - Created `docs/ACCURACY_REPORT.md` and updated `docs/PROJECT_SUMMARY_FOR_REVIEW.md` to reflect the 15 labeled-anomaly count and 1.000/1.000 headline metrics.
    - Verified `npm run build` compiled successfully with 0 errors.
    - Ran full `pytest detection/tests/` suite post-merge on `main`: 23 passed in 66.46s.
+   - Removed transient generated runner output `backend/simulator/output/detection_events.jsonl` from git tracking and updated `.gitignore` so subsequent validation runs do not create git diffs.
 
