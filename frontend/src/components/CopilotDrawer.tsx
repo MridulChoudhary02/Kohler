@@ -22,7 +22,7 @@ const STARTER_QUERIES = [
 ];
 
 export const CopilotDrawer: React.FC = () => {
-  const { isCopilotOpen, closeCopilot } = useDashboard();
+  const { isCopilotOpen, closeCopilot, openCopilot } = useDashboard();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
@@ -66,13 +66,13 @@ export const CopilotDrawer: React.FC = () => {
         if (isCopilotOpen) {
           closeCopilot();
         } else {
-          useDashboard().openCopilot();
+          openCopilot();
         }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isCopilotOpen, closeCopilot]);
+  }, [isCopilotOpen, closeCopilot, openCopilot]);
 
   const handleSend = async (queryText?: string) => {
     const textToSend = (queryText || inputValue).trim();
