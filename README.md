@@ -129,3 +129,5 @@ uvicorn app.main:app --reload
 
 - `PROMPT_LOG.md` — agent build log (converted to submission's Prompts Documentation PDF in Phase 8)
 - `PRD_Kohler_Track2_Hospital.md` — authoritative product spec; all implementation must match it
+## Demo Video
+Walkthrough video: <https://drive.google.com/file/d/1WGbEjOZqYK4qxu0xKR3wljCmOcdpofhE/view?usp=sharing>
