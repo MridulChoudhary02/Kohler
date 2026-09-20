@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "prebuild": "node -e 'if (!process.env.FORCE_BUILD) { try { const p = require(\"child_process\").execSync(\"pgrep -f \\\"next dev\\\"\").toString().trim(); if (p) { console.error(\"\\x1b[31m[ERROR] Build blocked: `next dev` is currently running on PID(s): \" + p.split(\"\\n\").join(\", \") + \". Running `next build` concurrently risks cache corruption. Please stop the dev server first.\\x1b[0m\"); process.exit(1); } } catch(e) {} }'",
+    "prebuild": "node scripts/test_alert_order.js && node -e 'if (!process.env.FORCE_BUILD) { try { const p = require(\"child_process\").execSync(\"pgrep -f \\\"next dev\\\"\").toString().trim(); if (p) { console.error(\"\\x1b[31m[ERROR] Build blocked: `next dev` is currently running on PID(s): \" + p.split(\"\\n\").join(\", \") + \". Running `next build` concurrently risks cache corruption. Please stop the dev server first.\\x1b[0m\"); process.exit(1); } } catch(e) {} }'",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

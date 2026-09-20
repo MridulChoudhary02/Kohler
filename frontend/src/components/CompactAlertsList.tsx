@@ -10,6 +10,21 @@ interface CompactAlertsListProps {
   onSelectEvent: (event: DetectionEvent) => void;
 }
 
+function formatAlertTimestamp(iso: string): string {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const month = months[d.getUTCMonth()];
+    const day = d.getUTCDate();
+    const time = iso.slice(11, 16);
+    return `${month} ${day}, ${time}`;
+  } catch {
+    return iso.slice(11, 16);
+  }
+}
+
 export const CompactAlertsList: React.FC<CompactAlertsListProps> = ({
   events,
   selectedZoneId,
@@ -30,9 +45,16 @@ export const CompactAlertsList: React.FC<CompactAlertsListProps> = ({
     }
 
     // Sort descending by detected_at, slice top 25
-    return Array.from(latestByFixture.values())
+    const sorted = Array.from(latestByFixture.values())
       .sort((a, b) => new Date(b.detected_at).getTime() - new Date(a.detected_at).getTime())
       .slice(0, 25);
+
+    // Runtime assertion: ensure rendered order is monotonically descending
+    if (sorted.some((ev, i, arr) => i > 0 && new Date(arr[i - 1].detected_at).getTime() < new Date(ev.detected_at).getTime())) {
+      throw new Error('AssertionError: CompactAlertsList events must be monotonically descending');
+    }
+
+    return sorted;
   }, [events, selectedZoneId]);
 
   return (
@@ -106,7 +128,7 @@ export const CompactAlertsList: React.FC<CompactAlertsListProps> = ({
                       {ev.fixture_id} • <span style={{ color: '#8f8f8f', fontWeight: 400 }}>{ev.zone_name || ev.zone_id}</span>
                     </div>
                     <div style={{ fontSize: '0.75rem', color: '#8f8f8f', marginTop: '2px' }}>
-                      {(ev.confidence_score * 100).toFixed(0)}% confidence • {ev.detected_at.slice(11, 16)}
+                      {(ev.confidence_score * 100).toFixed(0)}% confidence • {formatAlertTimestamp(ev.detected_at)}
                     </div>
                   </div>
                 </div>
