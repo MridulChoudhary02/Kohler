@@ -1,0 +1,15 @@
+{
+  "generated_at": "2026-09-20T15:21:43.925279+00:00",
+  "simulation_date": "2026-09-18",
+  "burst_events": [
+    {
+      "burst_id": "burst-zone-ot-0700",
+      "zone_id": "zone-ot",
+      "fixture_ids": [],
+      "start_timestamp": "2026-09-18T07:00:00+00:00",
+      "end_timestamp": "2026-09-18T09:00:00+00:00",
+      "usage_rate_multiplier": 2.5,
+      "notes": "Day 4 hard-neg: morning surgical prep surge in Operating Theatre (Tier 1)."
+    }
+  ]
+}

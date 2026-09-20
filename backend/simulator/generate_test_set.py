@@ -154,6 +154,16 @@ def generate(seed: int = 42, quiet: bool = False) -> None:
             "hard_neg_count":  len(hard_neg_events),
         })
 
+    # Combined telemetry output
+    combined_telem_path = OUT_DIR / "combined_telemetry.jsonl"
+    with open(combined_telem_path, "w") as out_f:
+        for d in range(1, len(ALL_DAYS) + 1):
+            day_file = OUT_DIR / f"day{d}_telemetry.jsonl"
+            if day_file.exists():
+                with open(day_file) as in_f:
+                    for line in in_f:
+                        out_f.write(line)
+
     # Combined output for single-pass Phase 2 scoring
     _write_json(OUT_DIR / "combined_anomaly_labels.json", {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -183,14 +193,14 @@ def generate(seed: int = 42, quiet: bool = False) -> None:
         print("─" * 60)
         print(f"✅ Test set complete → {OUT_DIR}")
         print(f"   Total readings:     {manifest['total_readings']:,}")
-        print(f"   Anomaly labels:     {manifest['total_anomaly_labels']}  (15 expected)")
-        print(f"   Burst events:       {manifest['total_burst_events']}   (3 expected)")
-        print(f"   Hard negatives:     {manifest['total_hard_negatives']}  (9 expected)")
+        print(f"   Anomaly labels:     {manifest['total_anomaly_labels']}  ({len(ALL_DAYS)*5} expected)")
+        print(f"   Burst events:       {manifest['total_burst_events']}   ({len(ALL_DAYS)} expected)")
+        print(f"   Hard negatives:     {manifest['total_hard_negatives']}")
         print()
         print("   Tier × type coverage:")
         for row in manifest["anomaly_type_coverage"]:
-            print(f"     {row['anomaly_type']:18s}  "
-                  f"D1={row['day1_tier']}  D2={row['day2_tier']}  D3={row['day3_tier']}")
+            tiers = "  ".join(f"D{i+1}={t}" for i, t in enumerate(row.get("tiers", [])))
+            print(f"     {row['anomaly_type']:18s}  {tiers}")
 
 
 def _coverage_summary(labels: list[dict]) -> list[dict]:
@@ -206,9 +216,7 @@ def _coverage_summary(labels: list[dict]) -> list[dict]:
         rows.append({
             "anomaly_type": atype,
             "count":        len(entries),
-            "day1_tier":    entries[0].get("tier", "?") if len(entries) > 0 else "?",
-            "day2_tier":    entries[1].get("tier", "?") if len(entries) > 1 else "?",
-            "day3_tier":    entries[2].get("tier", "?") if len(entries) > 2 else "?",
+            "tiers":        [e.get("tier", "?") for e in entries],
         })
     return rows
 

@@ -420,6 +420,426 @@ DAY3_HARD_NEGATIVES: list[HardNegativeSpec] = [
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# DAY 4 — 2026-09-18
+# ─────────────────────────────────────────────────────────────────────────────
+
+DAY4 = "2026-09-18"
+
+DAY4_ANOMALIES: list[AnomalySpec] = [
+    # sudden_leak — Tier 1, OT scrub_tap
+    AnomalySpec(
+        anomaly_type  = AnomalyType.SUDDEN_LEAK,
+        fixture_id    = "fix-ot-002",
+        sensor_id     = _sid("fix-ot-002"),
+        start_ts      = _ts(DAY4, 10,  0),
+        end_ts        = _ts(DAY4, 10, 45),
+        leak_flow_lpm = 0.85,
+    ),
+    # gradual_leak — Tier 2, Ward shower (gradual slow drip ramp)
+    AnomalySpec(
+        anomaly_type  = AnomalyType.GRADUAL_LEAK,
+        fixture_id    = "fix-ward-004",
+        sensor_id     = _sid("fix-ward-004"),
+        start_ts      = _ts(DAY4, 13,  0),
+        end_ts        = _ts(DAY4, 14, 30),
+        leak_flow_lpm = 0.65,
+    ),
+    # stuck_valve — Tier 3, Lab flush_valve
+    AnomalySpec(
+        anomaly_type      = AnomalyType.STUCK_VALVE,
+        fixture_id        = "fix-lab-003",
+        sensor_id         = _sid("fix-lab-003"),
+        start_ts          = _ts(DAY4, 15, 30),
+        end_ts            = _ts(DAY4, 16, 15),
+        stuck_threshold_s = 30.0,
+    ),
+    # sensor_flatline — Tier 1, ICU faucet
+    AnomalySpec(
+        anomaly_type   = AnomalyType.SENSOR_FLATLINE,
+        fixture_id     = "fix-icu-001",
+        sensor_id      = _sid("fix-icu-001"),
+        start_ts       = _ts(DAY4,  8, 30),
+        end_ts         = _ts(DAY4,  9, 15),
+        flatline_value = 0.0,
+    ),
+    # sensor_dropout — Tier 2, Ward urinal
+    AnomalySpec(
+        anomaly_type = AnomalyType.SENSOR_DROPOUT,
+        fixture_id   = "fix-ward-003",
+        sensor_id    = _sid("fix-ward-003"),
+        start_ts     = _ts(DAY4, 12,  0),
+        end_ts       = _ts(DAY4, 12, 45),
+    ),
+]
+
+# Hard negatives — Day 4
+_D4_BURST_OT = BurstSpec(
+    zone_id               = "zone-ot",
+    start_ts              = _ts(DAY4,  7,  0),
+    end_ts                = _ts(DAY4,  9,  0),
+    usage_rate_multiplier = 2.5,
+    notes = "Day 4 hard-neg: morning surgical prep surge in Operating Theatre (Tier 1).",
+)
+
+DAY4_BURSTS: list[BurstSpec] = [_D4_BURST_OT]
+
+DAY4_HARD_NEGATIVES: list[HardNegativeSpec] = [
+    # long_handwash — Tier 1 OT scrub tap
+    HardNegativeSpec(
+        neg_type        = HardNegativeType.LONG_HANDWASH,
+        fixture_id      = "fix-ot-003",
+        sensor_id       = _sid("fix-ot-003"),
+        start_ts        = _ts(DAY4, 11, 30),
+        end_ts          = _ts(DAY4, 11, 38),
+        long_duration_s = 480.0,
+    ),
+    # pressure_blip — Tier 1 ICU shower
+    HardNegativeSpec(
+        neg_type        = HardNegativeType.PRESSURE_BLIP,
+        fixture_id      = "fix-icu-004",
+        sensor_id       = _sid("fix-icu-004"),
+        start_ts        = _ts(DAY4, 14,  0),
+        end_ts          = _ts(DAY4, 14,  1),
+        blip_flow_lpm   = 0.28,
+        blip_duration_s = 45.0,
+    ),
+    # traffic_burst reference — OT zone
+    HardNegativeSpec(
+        neg_type   = HardNegativeType.TRAFFIC_BURST,
+        fixture_id = "zone-ot",
+        sensor_id  = "",
+        start_ts   = _D4_BURST_OT.start_ts,
+        end_ts     = _D4_BURST_OT.end_ts,
+        burst_id   = _D4_BURST_OT.burst_id,
+    ),
+    # long-occupancy cross-check — Tier 2 Ward faucet
+    HardNegativeSpec(
+        neg_type        = HardNegativeType.LONG_HANDWASH,
+        fixture_id      = "fix-ward-001",
+        sensor_id       = _sid("fix-ward-001"),
+        start_ts        = _ts(DAY4, 16,  0),
+        end_ts          = _ts(DAY4, 16,  8),
+        long_duration_s = 480.0,
+    ),
+]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DAY 5 — 2026-09-19
+# ─────────────────────────────────────────────────────────────────────────────
+
+DAY5 = "2026-09-19"
+
+DAY5_ANOMALIES: list[AnomalySpec] = [
+    # sudden_leak — Tier 2, Ward faucet
+    AnomalySpec(
+        anomaly_type  = AnomalyType.SUDDEN_LEAK,
+        fixture_id    = "fix-ward-001",
+        sensor_id     = _sid("fix-ward-001"),
+        start_ts      = _ts(DAY5,  9, 30),
+        end_ts        = _ts(DAY5, 10, 15),
+        leak_flow_lpm = 0.80,
+    ),
+    # gradual_leak — Tier 1, ICU flush_valve
+    AnomalySpec(
+        anomaly_type  = AnomalyType.GRADUAL_LEAK,
+        fixture_id    = "fix-icu-003",
+        sensor_id     = _sid("fix-icu-003"),
+        start_ts      = _ts(DAY5, 14,  0),
+        end_ts        = _ts(DAY5, 15, 30),
+        leak_flow_lpm = 0.58,
+    ),
+    # stuck_valve — Tier 4, Lobby flush_valve
+    AnomalySpec(
+        anomaly_type      = AnomalyType.STUCK_VALVE,
+        fixture_id        = "fix-lob-002",
+        sensor_id         = _sid("fix-lob-002"),
+        start_ts          = _ts(DAY5, 16, 30),
+        end_ts            = _ts(DAY5, 17, 15),
+        stuck_threshold_s = 30.0,
+    ),
+    # sensor_flatline — Tier 1, OT faucet
+    AnomalySpec(
+        anomaly_type   = AnomalyType.SENSOR_FLATLINE,
+        fixture_id     = "fix-ot-004",
+        sensor_id      = _sid("fix-ot-004"),
+        start_ts       = _ts(DAY5, 11,  0),
+        end_ts         = _ts(DAY5, 11, 45),
+        flatline_value = 0.0,
+    ),
+    # sensor_dropout — Tier 4, Lobby faucet
+    AnomalySpec(
+        anomaly_type = AnomalyType.SENSOR_DROPOUT,
+        fixture_id   = "fix-lob-001",
+        sensor_id    = _sid("fix-lob-001"),
+        start_ts     = _ts(DAY5, 13, 30),
+        end_ts       = _ts(DAY5, 14, 15),
+    ),
+]
+
+# Hard negatives — Day 5
+_D5_BURST_WARD = BurstSpec(
+    zone_id               = "zone-ward",
+    start_ts              = _ts(DAY5, 11, 30),
+    end_ts                = _ts(DAY5, 13, 30),
+    usage_rate_multiplier = 2.2,
+    notes = "Day 5 hard-neg: midday meal service & rounds in General Ward (Tier 2).",
+)
+
+DAY5_BURSTS: list[BurstSpec] = [_D5_BURST_WARD]
+
+DAY5_HARD_NEGATIVES: list[HardNegativeSpec] = [
+    # long_handwash — Tier 2 Ward faucet
+    HardNegativeSpec(
+        neg_type        = HardNegativeType.LONG_HANDWASH,
+        fixture_id      = "fix-ward-005",
+        sensor_id       = _sid("fix-ward-005"),
+        start_ts        = _ts(DAY5, 15,  0),
+        end_ts          = _ts(DAY5, 15,  8),
+        long_duration_s = 480.0,
+    ),
+    # pressure_blip — Tier 3 Lab scrub tap
+    HardNegativeSpec(
+        neg_type        = HardNegativeType.PRESSURE_BLIP,
+        fixture_id      = "fix-lab-001",
+        sensor_id       = _sid("fix-lab-001"),
+        start_ts        = _ts(DAY5,  8,  0),
+        end_ts          = _ts(DAY5,  8,  1),
+        blip_flow_lpm   = 0.30,
+        blip_duration_s = 50.0,
+    ),
+    # traffic_burst reference — Ward zone
+    HardNegativeSpec(
+        neg_type   = HardNegativeType.TRAFFIC_BURST,
+        fixture_id = "zone-ward",
+        sensor_id  = "",
+        start_ts   = _D5_BURST_WARD.start_ts,
+        end_ts     = _D5_BURST_WARD.end_ts,
+        burst_id   = _D5_BURST_WARD.burst_id,
+    ),
+    # long-occupancy cross-check — Tier 4 Lobby faucet
+    HardNegativeSpec(
+        neg_type        = HardNegativeType.LONG_HANDWASH,
+        fixture_id      = "fix-lob-003",
+        sensor_id       = _sid("fix-lob-003"),
+        start_ts        = _ts(DAY5, 17,  0),
+        end_ts          = _ts(DAY5, 17, 12),
+        long_duration_s = 720.0,
+    ),
+]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DAY 6 — 2026-09-20
+# ─────────────────────────────────────────────────────────────────────────────
+
+DAY6 = "2026-09-20"
+
+DAY6_ANOMALIES: list[AnomalySpec] = [
+    # sudden_leak — Tier 4, Lobby faucet
+    AnomalySpec(
+        anomaly_type  = AnomalyType.SUDDEN_LEAK,
+        fixture_id    = "fix-lob-003",
+        sensor_id     = _sid("fix-lob-003"),
+        start_ts      = _ts(DAY6, 14, 15),
+        end_ts        = _ts(DAY6, 15,  0),
+        leak_flow_lpm = 0.75,
+    ),
+    # gradual_leak — Tier 3, Lab faucet
+    AnomalySpec(
+        anomaly_type  = AnomalyType.GRADUAL_LEAK,
+        fixture_id    = "fix-lab-002",
+        sensor_id     = _sid("fix-lab-002"),
+        start_ts      = _ts(DAY6, 10,  0),
+        end_ts        = _ts(DAY6, 11, 30),
+        leak_flow_lpm = 0.62,
+    ),
+    # stuck_valve — Tier 2, Ward flush_valve
+    AnomalySpec(
+        anomaly_type      = AnomalyType.STUCK_VALVE,
+        fixture_id        = "fix-ward-002",
+        sensor_id         = _sid("fix-ward-002"),
+        start_ts          = _ts(DAY6, 16,  0),
+        end_ts            = _ts(DAY6, 16, 45),
+        stuck_threshold_s = 30.0,
+    ),
+    # sensor_flatline — Tier 2, Ward faucet
+    AnomalySpec(
+        anomaly_type   = AnomalyType.SENSOR_FLATLINE,
+        fixture_id     = "fix-ward-005",
+        sensor_id      = _sid("fix-ward-005"),
+        start_ts       = _ts(DAY6,  8, 45),
+        end_ts         = _ts(DAY6,  9, 30),
+        flatline_value = 0.0,
+    ),
+    # sensor_dropout — Tier 1, ICU flush_valve
+    AnomalySpec(
+        anomaly_type = AnomalyType.SENSOR_DROPOUT,
+        fixture_id   = "fix-icu-002",
+        sensor_id    = _sid("fix-icu-002"),
+        start_ts     = _ts(DAY6, 12, 30),
+        end_ts       = _ts(DAY6, 13, 15),
+    ),
+]
+
+# Hard negatives — Day 6
+_D6_BURST_LOBBY = BurstSpec(
+    zone_id               = "zone-lobby",
+    start_ts              = _ts(DAY6, 15,  0),
+    end_ts                = _ts(DAY6, 17,  0),
+    usage_rate_multiplier = 2.8,
+    notes = "Day 6 hard-neg: weekend visiting surge in Lobby & Visitor Restrooms (Tier 4).",
+)
+
+DAY6_BURSTS: list[BurstSpec] = [_D6_BURST_LOBBY]
+
+DAY6_HARD_NEGATIVES: list[HardNegativeSpec] = [
+    # long_handwash — Tier 1 ICU faucet
+    HardNegativeSpec(
+        neg_type        = HardNegativeType.LONG_HANDWASH,
+        fixture_id      = "fix-icu-005",
+        sensor_id       = _sid("fix-icu-005"),
+        start_ts        = _ts(DAY6,  9,  0),
+        end_ts          = _ts(DAY6,  9,  7),
+        long_duration_s = 420.0,
+    ),
+    # pressure_blip — Tier 1 OT scrub tap
+    HardNegativeSpec(
+        neg_type        = HardNegativeType.PRESSURE_BLIP,
+        fixture_id      = "fix-ot-001",
+        sensor_id       = _sid("fix-ot-001"),
+        start_ts        = _ts(DAY6, 13,  0),
+        end_ts          = _ts(DAY6, 13,  1),
+        blip_flow_lpm   = 0.25,
+        blip_duration_s = 45.0,
+    ),
+    # traffic_burst reference — Lobby zone
+    HardNegativeSpec(
+        neg_type   = HardNegativeType.TRAFFIC_BURST,
+        fixture_id = "zone-lobby",
+        sensor_id  = "",
+        start_ts   = _D6_BURST_LOBBY.start_ts,
+        end_ts     = _D6_BURST_LOBBY.end_ts,
+        burst_id   = _D6_BURST_LOBBY.burst_id,
+    ),
+    # long-occupancy cross-check — Tier 3 Lab faucet
+    HardNegativeSpec(
+        neg_type        = HardNegativeType.LONG_HANDWASH,
+        fixture_id      = "fix-lab-002",
+        sensor_id       = _sid("fix-lab-002"),
+        start_ts        = _ts(DAY6, 11, 45),
+        end_ts          = _ts(DAY6, 11, 55),
+        long_duration_s = 600.0,
+    ),
+]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DAY 7 — 2026-09-21
+# ─────────────────────────────────────────────────────────────────────────────
+
+DAY7 = "2026-09-21"
+
+DAY7_ANOMALIES: list[AnomalySpec] = [
+    # sudden_leak — Tier 1, ICU faucet
+    AnomalySpec(
+        anomaly_type  = AnomalyType.SUDDEN_LEAK,
+        fixture_id    = "fix-icu-005",
+        sensor_id     = _sid("fix-icu-005"),
+        start_ts      = _ts(DAY7, 11,  0),
+        end_ts        = _ts(DAY7, 11, 45),
+        leak_flow_lpm = 0.88,
+    ),
+    # gradual_leak — Tier 4, Lobby faucet
+    AnomalySpec(
+        anomaly_type  = AnomalyType.GRADUAL_LEAK,
+        fixture_id    = "fix-lob-001",
+        sensor_id     = _sid("fix-lob-001"),
+        start_ts      = _ts(DAY7, 13,  0),
+        end_ts        = _ts(DAY7, 14, 30),
+        leak_flow_lpm = 0.52,
+    ),
+    # stuck_valve — Tier 1, OT scrub_tap
+    AnomalySpec(
+        anomaly_type      = AnomalyType.STUCK_VALVE,
+        fixture_id        = "fix-ot-001",
+        sensor_id         = _sid("fix-ot-001"),
+        start_ts          = _ts(DAY7, 15,  0),
+        end_ts            = _ts(DAY7, 15, 45),
+        stuck_threshold_s = 30.0,
+    ),
+    # sensor_flatline — Tier 3, Lab scrub_tap
+    AnomalySpec(
+        anomaly_type   = AnomalyType.SENSOR_FLATLINE,
+        fixture_id     = "fix-lab-001",
+        sensor_id      = _sid("fix-lab-001"),
+        start_ts       = _ts(DAY7,  9, 15),
+        end_ts         = _ts(DAY7, 10,  0),
+        flatline_value = 0.0,
+    ),
+    # sensor_dropout — Tier 2, Ward shower
+    AnomalySpec(
+        anomaly_type = AnomalyType.SENSOR_DROPOUT,
+        fixture_id   = "fix-ward-004",
+        sensor_id    = _sid("fix-ward-004"),
+        start_ts     = _ts(DAY7, 16, 30),
+        end_ts       = _ts(DAY7, 17, 15),
+    ),
+]
+
+# Hard negatives — Day 7
+_D7_BURST_ICU = BurstSpec(
+    zone_id               = "zone-icu",
+    start_ts              = _ts(DAY7,  8,  0),
+    end_ts                = _ts(DAY7, 10,  0),
+    usage_rate_multiplier = 2.2,
+    notes = "Day 7 hard-neg: Monday morning intensive care clinical rounds (Tier 1).",
+)
+
+DAY7_BURSTS: list[BurstSpec] = [_D7_BURST_ICU]
+
+DAY7_HARD_NEGATIVES: list[HardNegativeSpec] = [
+    # long_handwash — Tier 1 OT scrub tap
+    HardNegativeSpec(
+        neg_type        = HardNegativeType.LONG_HANDWASH,
+        fixture_id      = "fix-ot-002",
+        sensor_id       = _sid("fix-ot-002"),
+        start_ts        = _ts(DAY7, 10, 30),
+        end_ts          = _ts(DAY7, 10, 37),
+        long_duration_s = 420.0,
+    ),
+    # pressure_blip — Tier 2 Ward faucet
+    HardNegativeSpec(
+        neg_type        = HardNegativeType.PRESSURE_BLIP,
+        fixture_id      = "fix-ward-001",
+        sensor_id       = _sid("fix-ward-001"),
+        start_ts        = _ts(DAY7, 12, 15),
+        end_ts          = _ts(DAY7, 12, 16),
+        blip_flow_lpm   = 0.32,
+        blip_duration_s = 55.0,
+    ),
+    # traffic_burst reference — ICU zone
+    HardNegativeSpec(
+        neg_type   = HardNegativeType.TRAFFIC_BURST,
+        fixture_id = "zone-icu",
+        sensor_id  = "",
+        start_ts   = _D7_BURST_ICU.start_ts,
+        end_ts     = _D7_BURST_ICU.end_ts,
+        burst_id   = _D7_BURST_ICU.burst_id,
+    ),
+    # long-occupancy cross-check — Tier 1 ICU faucet
+    HardNegativeSpec(
+        neg_type        = HardNegativeType.LONG_HANDWASH,
+        fixture_id      = "fix-icu-001",
+        sensor_id       = _sid("fix-icu-001"),
+        start_ts        = _ts(DAY7, 14, 30),
+        end_ts          = _ts(DAY7, 14, 38),
+        long_duration_s = 480.0,
+    ),
+]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # COMBINED ACCESSORS
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -427,10 +847,21 @@ ALL_DAYS: list[tuple[str, list[AnomalySpec], list[BurstSpec], list[HardNegativeS
     (DAY1, DAY1_ANOMALIES, DAY1_BURSTS, DAY1_HARD_NEGATIVES),
     (DAY2, DAY2_ANOMALIES, DAY2_BURSTS, DAY2_HARD_NEGATIVES),
     (DAY3, DAY3_ANOMALIES, DAY3_BURSTS, DAY3_HARD_NEGATIVES),
+    (DAY4, DAY4_ANOMALIES, DAY4_BURSTS, DAY4_HARD_NEGATIVES),
+    (DAY5, DAY5_ANOMALIES, DAY5_BURSTS, DAY5_HARD_NEGATIVES),
+    (DAY6, DAY6_ANOMALIES, DAY6_BURSTS, DAY6_HARD_NEGATIVES),
+    (DAY7, DAY7_ANOMALIES, DAY7_BURSTS, DAY7_HARD_NEGATIVES),
 ]
 
-ALL_ANOMALIES: list[AnomalySpec] = DAY1_ANOMALIES + DAY2_ANOMALIES + DAY3_ANOMALIES
-ALL_BURSTS:    list[BurstSpec]   = DAY1_BURSTS    + DAY2_BURSTS    + DAY3_BURSTS
+ALL_ANOMALIES: list[AnomalySpec] = (
+    DAY1_ANOMALIES + DAY2_ANOMALIES + DAY3_ANOMALIES +
+    DAY4_ANOMALIES + DAY5_ANOMALIES + DAY6_ANOMALIES + DAY7_ANOMALIES
+)
+ALL_BURSTS: list[BurstSpec] = (
+    DAY1_BURSTS + DAY2_BURSTS + DAY3_BURSTS +
+    DAY4_BURSTS + DAY5_BURSTS + DAY6_BURSTS + DAY7_BURSTS
+)
 ALL_HARD_NEGS: list[HardNegativeSpec] = (
-    DAY1_HARD_NEGATIVES + DAY2_HARD_NEGATIVES + DAY3_HARD_NEGATIVES
+    DAY1_HARD_NEGATIVES + DAY2_HARD_NEGATIVES + DAY3_HARD_NEGATIVES +
+    DAY4_HARD_NEGATIVES + DAY5_HARD_NEGATIVES + DAY6_HARD_NEGATIVES + DAY7_HARD_NEGATIVES
 )

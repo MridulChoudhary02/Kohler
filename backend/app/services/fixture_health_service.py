@@ -12,8 +12,8 @@ Calculates live transparent health and failure-risk scores per fixture:
     health_score = max(0.0, min(100.0, 100.0 - risk))
 
 Grounding & Denominators:
-- frequency_score denominator: 12.0 (based on observed active fixture mean=6.47, median=4.00, chronic outliers > 12)
-- recurrence_score denominator: 8.0 (based on observed inter-event spacing <=24h: mean=5.06, median=3.00)
+- frequency_score denominator: 11.43 (re-grounded 2026-09-20 21:24 against the 7-day dataset: per-fixture dispatched-event counts mean=5.75, stdev=4.73, denominator = mean + 1.2*stdev)
+- recurrence_score denominator: 8.62 (re-grounded 2026-09-20 21:24 against the 7-day dataset: per-fixture recurrence counts mean=3.55, stdev=4.23, denominator = mean + 1.2*stdev)
 - flow_drift_score: Evaluates idle flow readings (last 24h) against the active segment baseline:
     - On context-adaptive fixtures (fix-ot-001/002/003, fix-lab-001), compared against time-appropriate Day/Night mean.
     - On standard fixtures, compared against combined mean_idle_flow.
@@ -39,9 +39,9 @@ from app.models.models import (
 )
 from detection.baseline import BaselineProfile, load_baselines
 
-# Frequency and recurrence denominators grounded in real telemetry distribution (clean single-pass telemetry)
-FREQ_DENOMINATOR = 8.0
-REC_DENOMINATOR = 6.0
+# Frequency and recurrence denominators grounded in real telemetry distribution (7-day dataset, re-grounded 2026-09-20)
+FREQ_DENOMINATOR = 11.43
+REC_DENOMINATOR = 8.62
 FLOW_DRIFT_MAX_LPM = 0.30
 
 # Path to canonical prewarm baseline profiles

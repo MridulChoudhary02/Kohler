@@ -1,0 +1,77 @@
+{
+  "generated_at": "2026-09-20T15:21:44.781804+00:00",
+  "simulation_date": "2026-09-20",
+  "seed": 5042,
+  "anomalies": [
+    {
+      "anomaly_id": "anom-fix-lob-003-sudden_leak-1415",
+      "fixture_id": "fix-lob-003",
+      "sensor_id": "sen-lob-003",
+      "anomaly_type": "sudden_leak",
+      "start_timestamp": "2026-09-20T14:15:00+00:00",
+      "end_timestamp": "2026-09-20T15:00:00+00:00",
+      "parameters": {
+        "leak_flow_lpm": 0.75,
+        "stuck_threshold_s": 30.0,
+        "flatline_value": 0.0
+      },
+      "notes": "Sudden idle-flow anomaly: flow jumps to ~0.8 L/min at 2026-09-20T14:15:00+00:00 for 45 min."
+    },
+    {
+      "anomaly_id": "anom-fix-lab-002-gradual_leak-1000",
+      "fixture_id": "fix-lab-002",
+      "sensor_id": "sen-lab-002",
+      "anomaly_type": "gradual_leak",
+      "start_timestamp": "2026-09-20T10:00:00+00:00",
+      "end_timestamp": "2026-09-20T11:30:00+00:00",
+      "parameters": {
+        "leak_flow_lpm": 0.62,
+        "stuck_threshold_s": 30.0,
+        "flatline_value": 0.0
+      },
+      "notes": "Gradual idle-flow ramp from 0 to ~0.6 L/min over 90 min starting 2026-09-20T10:00:00+00:00."
+    },
+    {
+      "anomaly_id": "anom-fix-ward-002-stuck_valve-1600",
+      "fixture_id": "fix-ward-002",
+      "sensor_id": "sen-ward-002",
+      "anomaly_type": "stuck_valve",
+      "start_timestamp": "2026-09-20T16:00:00+00:00",
+      "end_timestamp": "2026-09-20T16:45:00+00:00",
+      "parameters": {
+        "leak_flow_lpm": 0.8,
+        "stuck_threshold_s": 30.0,
+        "flatline_value": 0.0
+      },
+      "notes": "Stuck-valve: post-flush flow does not return to baseline for 45 min from 2026-09-20T16:00:00+00:00."
+    },
+    {
+      "anomaly_id": "anom-fix-ward-005-sensor_flatline-0845",
+      "fixture_id": "fix-ward-005",
+      "sensor_id": "sen-ward-005",
+      "anomaly_type": "sensor_flatline",
+      "start_timestamp": "2026-09-20T08:45:00+00:00",
+      "end_timestamp": "2026-09-20T09:30:00+00:00",
+      "parameters": {
+        "leak_flow_lpm": 0.8,
+        "stuck_threshold_s": 30.0,
+        "flatline_value": 0.0
+      },
+      "notes": "Sensor flatline at value 0.0 L/min for 45 min from 2026-09-20T08:45:00+00:00."
+    },
+    {
+      "anomaly_id": "anom-fix-icu-002-sensor_dropout-1230",
+      "fixture_id": "fix-icu-002",
+      "sensor_id": "sen-icu-002",
+      "anomaly_type": "sensor_dropout",
+      "start_timestamp": "2026-09-20T12:30:00+00:00",
+      "end_timestamp": "2026-09-20T13:15:00+00:00",
+      "parameters": {
+        "leak_flow_lpm": 0.8,
+        "stuck_threshold_s": 30.0,
+        "flatline_value": 0.0
+      },
+      "notes": "Sensor dropout (no readings) for 45 min from 2026-09-20T12:30:00+00:00."
+    }
+  ]
+}

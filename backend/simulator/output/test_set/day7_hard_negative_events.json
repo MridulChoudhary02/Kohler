@@ -1,0 +1,70 @@
+{
+  "generated_at": "2026-09-20T15:21:45.213896+00:00",
+  "simulation_date": "2026-09-21",
+  "hard_negative_events": [
+    {
+      "neg_id": "neg-fix-ot-002-long_handwash-1030",
+      "neg_type": "long_handwash",
+      "fixture_id": "fix-ot-002",
+      "sensor_id": "sen-ot-002",
+      "start_timestamp": "2026-09-21T10:30:00+00:00",
+      "end_timestamp": "2026-09-21T10:37:00+00:00",
+      "parameters": {
+        "long_duration_s": 420.0,
+        "blip_flow_lpm": 0.3,
+        "blip_duration_s": 60.0,
+        "burst_id": null
+      },
+      "notes": "Hard negative \u2014 long handwash/shower: 420s legitimate use on fix-ot-002. Occupancy=1 throughout; flow returns to baseline when done. Should NOT trigger leak alert.",
+      "expected_detection": false
+    },
+    {
+      "neg_id": "neg-fix-ward-001-pressure_blip-1215",
+      "neg_type": "pressure_blip",
+      "fixture_id": "fix-ward-001",
+      "sensor_id": "sen-ward-001",
+      "start_timestamp": "2026-09-21T12:15:00+00:00",
+      "end_timestamp": "2026-09-21T12:16:00+00:00",
+      "parameters": {
+        "long_duration_s": 300.0,
+        "blip_flow_lpm": 0.32,
+        "blip_duration_s": 55.0,
+        "burst_id": null
+      },
+      "notes": "Hard negative \u2014 pressure blip: 0.32 L/min for 55s on fix-ward-001 at occupancy=0. Caused by neighboring fixture flush. Duration < any confirmation window.",
+      "expected_detection": false
+    },
+    {
+      "neg_id": "neg-zone-icu-traffic_burst-0800",
+      "neg_type": "traffic_burst",
+      "fixture_id": "zone-icu",
+      "sensor_id": "",
+      "start_timestamp": "2026-09-21T08:00:00+00:00",
+      "end_timestamp": "2026-09-21T10:00:00+00:00",
+      "parameters": {
+        "long_duration_s": 300.0,
+        "blip_flow_lpm": 0.3,
+        "blip_duration_s": 60.0,
+        "burst_id": "burst-zone-icu-0800"
+      },
+      "notes": "Hard negative \u2014 legitimate traffic burst on zone-icu: 120.0 min of elevated usage. Uses hygiene counter but is normal. Should NOT trigger leak alert, only hygiene prediction.",
+      "expected_detection": false
+    },
+    {
+      "neg_id": "neg-fix-icu-001-long_handwash-1430",
+      "neg_type": "long_handwash",
+      "fixture_id": "fix-icu-001",
+      "sensor_id": "sen-icu-001",
+      "start_timestamp": "2026-09-21T14:30:00+00:00",
+      "end_timestamp": "2026-09-21T14:38:00+00:00",
+      "parameters": {
+        "long_duration_s": 480.0,
+        "blip_flow_lpm": 0.3,
+        "blip_duration_s": 60.0,
+        "burst_id": null
+      },
+      "notes": "Hard negative \u2014 long handwash/shower: 480s legitimate use on fix-icu-001. Occupancy=1 throughout; flow returns to baseline when done. Should NOT trigger leak alert.",
+      "expected_detection": false
+    }
+  ]
+}

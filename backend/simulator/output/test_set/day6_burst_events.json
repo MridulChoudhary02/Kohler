@@ -1,0 +1,15 @@
+{
+  "generated_at": "2026-09-20T15:21:44.782113+00:00",
+  "simulation_date": "2026-09-20",
+  "burst_events": [
+    {
+      "burst_id": "burst-zone-lobby-1500",
+      "zone_id": "zone-lobby",
+      "fixture_ids": [],
+      "start_timestamp": "2026-09-20T15:00:00+00:00",
+      "end_timestamp": "2026-09-20T17:00:00+00:00",
+      "usage_rate_multiplier": 2.8,
+      "notes": "Day 6 hard-neg: weekend visiting surge in Lobby & Visitor Restrooms (Tier 4)."
+    }
+  ]
+}

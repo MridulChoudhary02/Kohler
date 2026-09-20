@@ -1,0 +1,15 @@
+{
+  "generated_at": "2026-09-20T15:21:44.352274+00:00",
+  "simulation_date": "2026-09-19",
+  "burst_events": [
+    {
+      "burst_id": "burst-zone-ward-1130",
+      "zone_id": "zone-ward",
+      "fixture_ids": [],
+      "start_timestamp": "2026-09-19T11:30:00+00:00",
+      "end_timestamp": "2026-09-19T13:30:00+00:00",
+      "usage_rate_multiplier": 2.2,
+      "notes": "Day 5 hard-neg: midday meal service & rounds in General Ward (Tier 2)."
+    }
+  ]
+}
