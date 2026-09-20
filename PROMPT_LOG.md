@@ -1110,3 +1110,35 @@ Build the AI Incident Investigator per spec:
    - `npm run build`: Compiled 7/7 static routes with 0 errors.
    - Full pytest suite: 26 passed, 0 failed in 59.48s.
    - Branch `feature/ai-incident-investigator` committed (`bbce23f`), merged to `main`, and pushed to `origin/main`.
+
+---
+
+## [2026-09-20 13:55] — Feature: Modal Declutter & Layout Reorganization
+
+**Trigger:** User instruction to streamline `FixtureDrillDownModal.tsx` on `feature/modal-declutter` by removing obsolete narrative redundancy, collapsing technical sensor metrics behind an accordion, and eliminating duplicate AI action triggers.
+
+**Prompt/instruction used:**
+On a new branch feature/modal-declutter: in FixtureDrillDownModal.tsx:
+1. Remove the "Incident Narrative Summary" section entirely (and its data fetch/prop if unused elsewhere) — the AI Incident Investigator's "Diagnostic Summary" replaces it.
+2. Restructure into two states: always-visible essentials (top KPI tiles, Evidence Timeline Progression, AI Incident Investigator once fetched) and a collapsed-by-default "Technical Diagnostics" section (Statistical Baseline & Diagnostic State + Raw Sensor Telemetry Readings chart) behind a toggle/accordion labeled something like "Show sensor-level diagnostics ▾" — collapsed by default, expandable for someone who wants to verify the underlying data.
+3. Keep the AI Investigate button and its rendered output exactly as-is functionally — only reorganize surrounding layout, don't touch investigation_service.py or its guardrails.
+4. Audit both AI buttons (header "AI Investigate" and section "Run AI Diagnosis"). If identical, drop the header button.
+5. Verify via CDP DOM dumps of collapsed/expanded states, single-button audit, npm run build (0 errors), and post-merge pytest regression check on main (26/26 passed).
+
+**Action taken:**
+1. Layout Streamlining & Section Removal:
+   - Removed obsolete "Incident Narrative Summary" section and cleaned up its unused `summary` binding (`activeTicket?.summary_text`). The AI Incident Investigator's diagnostic summary replaces this entirely.
+   - Removed redundant header `#btn-ai-investigate` button after verifying it shared the exact same `handleRunInvestigation` handler and state as the section button. Retained the single, contextually located `#btn-section-ai-investigate` ("Run AI Diagnosis") directly within `#ai-investigator-section`.
+2. Collapsible Technical Diagnostics Accordion:
+   - Restructured modal into always-visible essentials (Hero KPI cards, Evidence Timeline Progression, AI Incident Investigator) and collapsed-by-default technical diagnostics.
+   - Created `#btn-toggle-diagnostics` accordion toggle labeled `"Show sensor-level diagnostics ▾"` / `"Hide sensor-level diagnostics ▴"` with `ChevronDown` / `ChevronUp` indicators.
+   - Nested Section 3 (Statistical Baseline & Diagnostic State) and Section 4 (Raw Sensor Telemetry Readings time-series bar chart) inside `#technical-diagnostics-section`, rendered conditionally on accordion expansion.
+3. Code Integrity:
+   - Zero modifications to backend, detection, or database code.
+4. Verification & Quality Checks:
+   - CDP DOM dump confirmed collapsed default state is visibly shorter (`Technical Section in DOM: false`, `Old Incident Narrative in DOM: false`, `AI Investigator Section in DOM: true`).
+   - CDP DOM dump confirmed expanded state cleanly renders `#technical-diagnostics-section` (`Technical Section in DOM: true`).
+   - CDP button audit confirmed exactly 1 AI trigger button exists in modal (`#btn-section-ai-investigate`).
+   - `npm run build`: Compiled 7/7 static routes with 0 errors pre- and post-merge.
+   - `pytest backend/detection/tests/ -v`: Full regression test passed (26 passed, 0 failed in 61.98s).
+   - Fast-forward merge confirmed (`ad189a6` -> `41d7087`), pushed to `origin/main`.
