@@ -167,7 +167,7 @@ export const FixtureDrillDownModal: React.FC<FixtureDrillDownModalProps> = ({
   const impactFlowLpm = lossRateLph > 0 ? lossRateLph / 60.0 : (sustainabilityImpact?.observed_flow_lpm ?? 0.0);
   const impactDurationMins = durationSeconds > 0 ? durationSeconds / 60.0 : (sustainabilityImpact?.elapsed_minutes ?? 18.0);
   const waterLostLiters = sustainabilityImpact?.prevented_waste?.actual_loss_liters ?? Number((impactFlowLpm * impactDurationMins).toFixed(1));
-  const estimatedAvoidedLiters = sustainabilityImpact?.prevented_waste?.estimated_water_saved_liters ?? Number(Math.max(0, impactFlowLpm * (impactDurationMins >= 360 ? impactDurationMins + 360 : 360) - (impactFlowLpm * impactDurationMins)).toFixed(1));
+  const estimatedAvoidedLiters = sustainabilityImpact?.prevented_waste?.estimated_water_saved_liters ?? Number(Math.max(0, impactFlowLpm * 360.0 - (impactFlowLpm * impactDurationMins)).toFixed(1));
   const avoidedCostInr = sustainabilityImpact?.prevented_waste?.avoided_cost_inr ?? Number((estimatedAvoidedLiters * 0.15).toFixed(2));
   const lostCostInr = sustainabilityImpact?.prevented_waste?.cost_impact_inr ?? Number((waterLostLiters * 0.15).toFixed(2));
 

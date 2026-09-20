@@ -98,12 +98,7 @@ def calculate_prevented_waste(
         }
 
     actual_loss = round(flow * elapsed_minutes, 2)
-    if elapsed_minutes >= ref_window_minutes:
-        potential_duration = elapsed_minutes + ref_window_minutes
-    else:
-        potential_duration = ref_window_minutes
-
-    potential_loss = round(flow * potential_duration, 2)
+    potential_loss = round(flow * ref_window_minutes, 2)
     estimated_water_saved = max(0.0, round(potential_loss - actual_loss, 2))
     avoided_cost = round(estimated_water_saved * tariff, 2)
     cost_impact = round(actual_loss * tariff, 2)

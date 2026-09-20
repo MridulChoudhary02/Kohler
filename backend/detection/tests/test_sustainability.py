@@ -103,8 +103,8 @@ def test_prevented_waste_within_6hr_reference_window():
 
 def test_prevented_waste_exceeding_reference_window():
     """
-    When incident took longer than reference window (e.g. 400 min > 360 min),
-    potential duration projects forward by reference window (+360 min).
+    When incident duration exceeds reference window (e.g. 400 min > 360 min),
+    actual loss exceeds potential counterfactual loss, so estimated water saved is 0.
     """
     flow = 1.0  # 1 LPM
     elapsed_min = 400.0
@@ -113,9 +113,9 @@ def test_prevented_waste_exceeding_reference_window():
     result = calculate_prevented_waste(flow, elapsed_min, ref_window_minutes=ref_window)
     assert result is not None
     assert result["actual_loss_liters"] == 400.0
-    assert result["potential_loss_liters"] == 760.0  # 400 + 360
-    assert result["estimated_water_saved_liters"] == 360.0
-    assert result["avoided_cost_inr"] == round(360.0 * 0.15, 2)  # ₹54.0
+    assert result["potential_loss_liters"] == 360.0
+    assert result["estimated_water_saved_liters"] == 0.0
+    assert result["avoided_cost_inr"] == 0.0
 
 
 def test_strict_timestamp_exclusion_rule():
