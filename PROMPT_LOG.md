@@ -1247,3 +1247,64 @@ Remove the standalone /alerts page from the dashboard, but keep the "recent aler
   - Test suite (`pytest backend/detection/tests/ -v`): 37 passed, 0 failed in 74.89s.
 
 
+
+## [2026-09-20 19:26] — Feature: Fixture Health Command Center Page
+
+**Trigger:** User request for a dedicated Fixture Health page surfacing the backend predictive health scoring (built in the prior 18:58 session) as its own navigable view, rather than only via API.
+
+**Prompt/instruction used:** Build a Fixture Health page (`/fixtures/health`) consuming `GET /api/v1/fixtures/health`: a KPI summary row (facility health score, high-risk count, watch count), a matrix grid/list of all 20 fixtures showing fixture ID, type, zone tier, health-score bar gauge, status badge (healthy/watch/degrading/high_risk), trend indicator, dispatched incident count, open ticket count, and status-tiered recommendation text, plus a per-fixture detail modal (`FixtureHealthDetailModal.tsx`) breaking down the risk components.
+
+**Action taken:**
+- Created `frontend/src/app/fixtures/health/page.tsx` and `frontend/src/components/FixtureHealthDetailModal.tsx`.
+- Added `/fixtures/health` nav entry to `Header.tsx`.
+- Verified against live API data (no placeholders) and `npm run build` (7/7 routes, 0 errors).
+- Committed as `68da2e7`.
+
+---
+
+## [2026-09-20 19:33 to 19:41] — Refactor: Remove Dead "/alerts" Link Left Behind by Prior Removal
+
+**Trigger:** User reported the Overview page's "Recent Anomaly Events" panel had a "View all →" link 404ing after the standalone `/alerts` route (removed at 19:30) was deleted — the earlier removal's "no dead links" grep pass had missed a link inside `CompactAlertsList.tsx` itself rather than in nav/routing config.
+
+**Prompt/instruction used:** Remove the "View all" button/link in `CompactAlertsList.tsx` entirely (no full-page destination exists anymore); re-grep the whole frontend for any other remaining `/alerts` references; rebuild and verify.
+
+**Action taken:**
+- Removed the `<Link href="/alerts">` element and its now-unused `Link`/`ArrowRight` imports from `CompactAlertsList.tsx`.
+- Full-tree grep for `/alerts`, `'alerts'`, `"alerts"` returned zero remaining references.
+- `npm run build`: 0 errors. Committed as `1c69fab`.
+
+---
+
+## [2026-09-20 19:50 to 20:09] — Fix: Recent Anomaly Events Panel — Fixture-Deduplication, Scrollability, and Sort-Order Correction
+
+**Trigger:** User observed the Overview "Recent Anomaly Events" panel showing all 5 (later 8) slots occupied by repeat firings of the same single leaking fixture (`fix-lob-002`), hiding every other fixture's anomalies including sub-threshold/logged events not visible anywhere else in the UI. Follow-up: after widening the panel to show more entries, the displayed order (`17:29, 14:08, 11:30, 10:03, 10:03, 09:01, 15:05, 11:06...`) appeared non-monotonic.
+
+**Prompt/instruction used:**
+1. Deduplicate the panel's event list by `fixture_id` inside a `useMemo`, keeping only the most-recent event per distinct fixture, sorted descending by `detected_at`, before slicing to a display count.
+2. Widen the display from a hard slice (5, then 8) to a scrollable container (`max-height` + `overflow-y-auto`) showing all distinct-fixture events (up to 25), matching the visual height of the adjacent "Top Dispatch Tickets" panel.
+3. Investigate the apparently-scrambled timestamp order: confirm via raw `detected_at` values whether entries genuinely span multiple calendar dates (display bug — clock-only label) or the sort comparator itself is broken.
+
+**Action taken:**
+- Implemented fixture-deduplication reducer (`Map<fixture_id, latest event>`) + descending sort in `CompactAlertsList.tsx`. Committed as `dca2f94`.
+- Expanded to a scrollable internal container showing all 17 distinct fixtures with events, height-matched to "Top Dispatch Tickets" (`a5338e9`).
+- Root-caused the apparent ordering issue: raw timestamps confirmed the events genuinely span three calendar dates (Sep 15–17); the sort comparator was correct, but the UI displayed only `HH:MM` with no date, making cross-day ordering look scrambled. Added `formatAlertTimestamp()` to render full date + time (`"Sep 17, 09:01"`), plus a runtime monotonicity assertion in the `useMemo` and a standalone build-time regression test (`frontend/scripts/test_alert_order.js`) wired into `prebuild` so `npm run build` fails if sort order ever regresses. Committed as `a33b886`.
+- Verification: `npm run build` (0 errors, prebuild monotonicity test passes), live browser DOM dump confirmed 17 distinct-fixture rows in strictly descending chronological order with correct dates.
+
+---
+
+## [2026-09-20 20:16 to 20:41] — Feature: Sustainability Impact Page (Water-Savings / Prevented-Waste Tracking)
+
+**Trigger:** User requested a Sustainability feature page, referencing an external feature-implementation-plan document's "Water-Savings / Sustainability Impact" section (Section 2) as the spec, adapted to this codebase's actual schema (the reference doc assumed a different, unrelated schema: SQLite, `Sink_07`-style fixture IDs, a different ticket lifecycle).
+
+**Prompt/instruction used:**
+1. Reuse existing tariff (`settings.WATER_COST_INR_PER_LITRE`, ₹0.15/L) and water-waste aggregation logic already powering the Overview KPI tiles — do not redefine.
+2. Backend: incident projection for active tickets at +1hr/+6hr/+24hr/+7days horizons (`projected_loss = observed_flow_lpm * horizon_minutes`); prevented-waste counterfactual for resolved tickets (`estimated_water_saved = potential_loss_without_intervention − actual_loss_before_resolution`) using a 6-hour reference window (revised down from an initial 24-hour assumption to keep the estimate demo-defensible); facility-wide summary endpoint (`GET /api/v1/sustainability/summary`) returning waste, saved liters, cost impact, avoided cost, projected unresolved loss, and top fixtures/zones; strict exclusion (no fallback duration) of any resolved ticket with missing/invalid timestamps.
+3. Frontend: new `/sustainability` page (KPI row, projection-horizon matrix, top-waste fixture/zone tables, methodology disclosure) and an "Intervention Impact" section added to `FixtureDrillDownModal.tsx`, shown only when a ticket's status is `resolved`.
+4. Write backend unit tests against real fixture flow values (not invented numbers) covering the tariff constant, projection math, the 6-hour reference window, timestamp-exclusion rule, and the summary endpoint contract.
+
+**Action taken:**
+- Implemented `backend/app/services/sustainability_service.py`, `backend/app/api/sustainability.py` (mounted in `main.py`), `frontend/src/app/sustainability/page.tsx`, and the `FixtureDrillDownModal.tsx` Intervention Impact section. Added `backend/detection/tests/test_sustainability.py` (6 new tests). Committed as `a712f95`.
+- **Bug found during manual review before trusting the numbers on-screen:** the prevented-waste formula's `potential_duration = elapsed_minutes + ref_window_minutes` branch algebraically cancelled to a constant `flow * ref_window_minutes` regardless of how long an incident had actually run — meaning a ticket open for 25+ hours was incorrectly credited with the same "water saved" as one resolved promptly. Root-caused via a raw intermediate-value spot-check across all 3 resolved tickets (printing `flow_lpm`, `elapsed_min`, `potential_loss`, `actual_loss` per ticket) before accepting the feature as correct.
+- Fixed to the exact intended formula (`potential_loss = flow * ref_window_minutes` fixed, independent of elapsed time; `saved = max(0, potential_loss − actual_loss)`), confirming all three existing resolved tickets (each open 25–28 hours, exceeding the 6-hour window) now correctly report `estimated_water_saved = 0` rather than a fabricated positive figure. One ticket (`a82a215b`) was additionally found to have `resolved_at < detected_at` (a synthetic-timestamp ordering artifact) and is correctly excluded by the existing Rule-1 timestamp-validity check, with no assumed fallback substituted. Updated `test_sustainability.py` and `FixtureDrillDownModal.tsx`'s client-side fallback accordingly. Committed as `a76bdc2`.
+- Verification: 43/43 backend tests passed, `npm run build` 0 errors, browser-verified real (non-placeholder) numbers on `/sustainability` and in the resolved-ticket Intervention Impact section.
+
