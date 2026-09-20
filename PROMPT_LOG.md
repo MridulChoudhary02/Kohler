@@ -1142,3 +1142,42 @@ On a new branch feature/modal-declutter: in FixtureDrillDownModal.tsx:
    - `npm run build`: Compiled 7/7 static routes with 0 errors pre- and post-merge.
    - `pytest backend/detection/tests/ -v`: Full regression test passed (26 passed, 0 failed in 61.98s).
    - Fast-forward merge confirmed (`ad189a6` -> `41d7087`), pushed to `origin/main`.
+
+---
+
+## [2026-09-20 18:10] — Feature: Context-Adaptive Idle-Flow Baseline with Significance Gating and Empirical Bayes Shrinkage
+
+**Trigger:** User instruction to implement a two-part statistical correction on `feature/context-adaptive-baseline` to resolve false-positive regressions without adjusting global control chart constants (`EWMA_LAMBDA = 0.2`, `UCL_L_FACTOR = 3.0`).
+
+**Prompt/instruction used:**
+On feature/context-adaptive-baseline, fix the FP regression with a proper two-part correction. Do not just retune a single constant — implement both:
+PART 1 — Per-fixture significance gating: compute z-statistic on difference of means (day vs. night) from Welford standard errors; require BOTH |z| >= 3.0 AND relative difference >= 25% to enable day/night split; fixtures failing gate permanently stay on single combined baseline.
+PART 2 — Empirical Bayes shrinkage for passed fixtures: shrink day/night mean and std toward combined baseline using prior pseudo-count k = 6,720 (1 full week of nocturnal readings); formula: shrunk = (n*segment + k*combined) / (n+k).
+Ensure baseline freeze when is_suspicious applies fixture-wide across both segments.
+Move baseline regeneration to committed script scripts/regenerate_baselines.py.
+Document known limitation regarding fix-ot-002/003 night-window coverage in docs/ACCURACY_REPORT.md.
+Verify via canonical baseline regeneration, full 32-test pytest suite, 15/15 benchmark runner, clean npm run build, merge to main (fast-forward), and push to origin/main.
+
+**Action taken:**
+1. Per-Fixture Significance Gating (`backend/detection/baseline.py`):
+   - Calculated two-sample difference-of-means test statistic:
+     $$z = \frac{\mu_{\text{day}} - \mu_{\text{night}}}{\sqrt{\text{se}_{\text{day}}^2 + \text{se}_{\text{night}}^2}}$$
+   - Enforced dual gating criterion: $|z| \ge 3.0$ and $\frac{|\mu_{\text{day}} - \mu_{\text{night}}|}{\mu_{\text{combined}}} \ge 0.25$.
+   - Successfully isolated the 4 high-variance clinical/operating theatre fixtures (`fix-ot-001`, `fix-ot-002`, `fix-ot-003`, `fix-lab-001`), while permanently keeping all 16 other fixtures (ICU, general ward, lobby, standard faucets) on the combined single baseline profile.
+2. Empirical Bayes Shrinkage (`backend/detection/baseline.py`):
+   - Implemented shrinkage for passed fixtures:
+     $$\mu_{\text{shrunk}} = \frac{n \cdot \mu_{\text{segment}} + k \cdot \mu_{\text{combined}}}{n + k}, \quad \sigma_{\text{shrunk}} = \frac{n \cdot \sigma_{\text{segment}} + k \cdot \sigma_{\text{combined}}}{n + k}$$
+   - Configured prior pseudo-count $k = 6,720$ ($1\text{ week} \times 7\text{ days} \times 960\text{ min/night}$). Widened `fix-ot-002` nocturnal UCL from naive $5.984\text{ LPM}$ to a safe $6.734\text{ LPM}$, eliminating false-alarm triggers on early-morning surgical prep flows ($6.581\text{ LPM}$).
+3. Fixture-Wide Baseline Freeze Protection (`backend/detection/engine.py`):
+   - Extended `DetectionEngine.process_reading` to maintain dual-window EWMA states (`_window_ewma`) while enforcing fixture-wide freeze protection: when `trend_tracker.is_suspicious` is active, EWMA adaptation is frozen across both day and night baselines to prevent micro-leak absorption.
+4. Committed Canonical Regeneration Script (`backend/scripts/regenerate_baselines.py`):
+   - Created standalone CLI tool for regenerating `baseline_profiles.json` with gating and shrinkage parameters pulled directly from configuration.
+5. Known Limitations Documented (`docs/ACCURACY_REPORT.md`):
+   - Added Section 5 ("Known Limitations"): While `fix-ot-001` contains a daytime gradual leak evaluated in the benchmark corpus (`anom-fix-ot-001-gradual_leak-0800`, detected at 48.5 min latency matching pre-shrinkage), `combined_anomaly_labels.json` contains no injected anomaly events for `fix-ot-002` or `fix-ot-003`. Consequently, empirical detection latency and sensitivity for leaks occurring specifically during the night window (22:00–06:00 UTC) on `fix-ot-002` and `fix-ot-003` cannot be directly scored against ground truth in this benchmark corpus and rely on statistical safety bounds established by empirical Bayes shrinkage ($k = 6,720$).
+6. Verification & Quality Checks:
+   - Canonical baseline regeneration: `python3 -m scripts.regenerate_baselines` confirmed 4 fixtures passed split, 16 remained combined.
+   - Comprehensive unit tests: `test_context_adaptive_baseline.py` passed 6/6 tests covering gating, shrinkage UCL widening, fallback, legacy parity, and freeze protection.
+   - Full pytest suite: 32 passed in 63.75s (`test_ordinary_flushes.py` confirmed 0 FP across 403,200 readings).
+   - Accuracy benchmark: Precision 1.000, Recall 1.000, F1 1.000, TP=15, FP=0, FN=0, RD=30.
+   - Frontend build: `npm run build` compiled 7/7 routes with 0 errors pre- and post-merge.
+   - Branch merged to `main` via fast-forward (`236dd91` -> `6df5ce6`) and pushed to `origin/main`.
