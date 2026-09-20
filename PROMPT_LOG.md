@@ -1181,3 +1181,44 @@ Verify via canonical baseline regeneration, full 32-test pytest suite, 15/15 ben
    - Accuracy benchmark: Precision 1.000, Recall 1.000, F1 1.000, TP=15, FP=0, FN=0, RD=30.
    - Frontend build: `npm run build` compiled 7/7 routes with 0 errors pre- and post-merge.
    - Branch merged to `main` via fast-forward (`236dd91` -> `6df5ce6`) and pushed to `origin/main`.
+
+---
+
+## [2026-09-20 18:58] — Feature: Fixture Predictive Health Scoring & Database Replay Deduplication
+
+**Trigger:** User prompt requesting implementation of live, dynamic Fixture Health scoring (PRD Section 11 / Track 2 scoring formula), database telemetry deduplication audit and fix, and recommendation tiering.
+
+**Prompt/instruction used:**
+1. Investigate whether `detection_events` and `tickets` contain duplicate insertions from repeated telemetry ingestion across dev-server restarts. Audit `fix-icu-002` and calculate exact duplicate groups across the database.
+2. Provide a clean database reset / deduplication script (`reset_clean_state.py`) to eliminate replay pollution before dashboard screenshots or recordings.
+3. Fix `sensor_health_score` consistency on `fix-lob-002` ensuring it derives from the same underlying count as `sensor_faults_count`.
+4. Re-derive `FREQ_DENOMINATOR` and `REC_DENOMINATOR` against the clean unique event distribution.
+5. Tier recommendation guidance by `health_status` so `healthy` fixtures never show priority alarm language.
+6. Fix regex in `test_ai_investigator.py` for extracting numeric tokens from ISO timestamps (`T10:27:00Z`).
+7. Commit on `feature/fixture-health`, merge fast-forward to `main`, run full test suite and build verification, push to `origin/main`.
+
+**Action taken:**
+1. Database Duplication Investigation & Fix:
+   - Audit revealed exact 2x duplicate replay pollution across all operational tables: `telemetry_readings` had 172,530 duplicate groups (345,060 total rows down to 172,530 unique), `detection_events` had 57 duplicate groups (114 rows down to 57 unique), and `tickets` had 55 duplicate groups (110 rows down to 55 unique).
+   - Created `backend/scripts/reset_clean_state.py` supporting in-place transactional deduplication (`--deduplicate`) and full clean purge/reseed (`--purge-all`). Executed deduplication transactionally, eliminating all 57 redundant events, 55 redundant tickets, and 172,530 redundant telemetry rows.
+   - Impact on Facility Metrics: Removing artificial duplicate replay incidents lifted `facility_health_score` from **73.1 to 81.2** (+8.1 points), and refined `high_risk_count` to the true chronic failure cohort (`fix-icu-002` @ 25.0 health, `fix-lob-002` @ 39.2 health).
+2. Grounded Denominator Methodology:
+   - Queried the real distribution of dispatched detection events across all 17 fixtures with events: Min = 1, Max = 16 (`fix-lob-002`), Mean = 3.24, Median = 2.0, P75 = 2.5.
+   - Queried recurrence counts ($\le 24\text{h}$ gap): Min = 0, Max = 13, Mean = 1.82, Median = 1.0, P75 = 1.0.
+   - Grounded `FREQ_DENOMINATOR = 8.0` ($\text{Mean} + 1.2 \times \text{StdDev}$) and `REC_DENOMINATOR = 6.0` ($\text{Mean} + 1.2 \times \text{StdDev}$). This creates a natural boundary where the 14 normal fixtures ($\le 3$ events, $\le 1$ recurrence) incur low risk penalties ($12.5\% - 25\%$), while the 3 chronic failing fixtures (`fix-icu-002`, `fix-lab-003`, `fix-lob-002`) receive a full 100% frequency/recurrence risk penalty.
+3. Predictive Health Service & Tiered Recommendations (`backend/app/services/fixture_health_service.py`):
+   - Computes weighted failure risk:
+     $$\text{risk} = 0.30 \cdot f_{\text{freq}} + 0.20 \cdot f_{\text{rec}} + 0.20 \cdot f_{\text{drift}} + 0.15 \cdot f_{\text{slow\_leak}} + 0.10 \cdot f_{\text{sensor}} + 0.05 \cdot f_{\text{unresolved}}$$
+     $$\text{health\_score} = \max(0, \min(100, 100 - \text{risk}))$$
+   - Context-adaptive flow drift: for `fix-ot-001`, `fix-ot-002`, `fix-ot-003`, and `fix-lab-001`, recent non-flush idle flow is evaluated against the time-appropriate day or night baseline segment based on reading timestamp.
+   - Tiered recommendations: High-risk and degrading fixtures receive priority action instructions (`"Priority maintenance required..."`), watch fixtures receive proactive inspection guidance (`"Sensor health maintenance recommended..."`), and healthy fixtures with open tickets receive proportionate non-alarm language (`"Operating normally — N minor ticket(s) pending closure."`).
+4. Endpoints & Schemas (`backend/app/api/events.py`):
+   - Registered `GET /api/v1/fixtures/health` and `GET /api/v1/fixtures/{fixture_id}/health`.
+5. Bugfixes:
+   - `sensor_health_score` / `sensor_faults_count` consistency: verified both strictly derive from `sensor_fault_cnt = sum(1 for e in evs if e[1] == "sensor_fault")`. In the clean database, `fix-lob-002` has exactly 1 sensor fault event, returning `sensor_faults_count = 1` and `sensor_health_score = 50.0`.
+   - `test_ai_investigator.py`: removed word boundary `\b` in `_collect_numbers_from_object` regex so digits immediately following `T` in ISO timestamps (`T10:27:00Z`) are correctly harvested, preventing spurious hallucination assertion errors.
+6. Verification & Quality Checks:
+   - Full test suite: 37 passed in 67.76s (`backend/detection/tests/test_fixture_health.py` passing 5/5).
+   - Live curl verification: Verified `GET /api/v1/fixtures/fix-lob-002/health` and `GET /api/v1/fixtures/health`.
+   - Frontend build: `npm run build` compiled 7/7 routes cleanly with 0 errors.
+

@@ -21,6 +21,7 @@ from app.core.database import get_db
 from app.models.models import DetectionEvent, Fixture, Zone, Ticket, HygieneCounter, BaselineProfile, Sensor, TelemetryReading
 from app.services.llm_service import summarize_incident, answer_facility_query, FALLBACK_SUMMARY
 from app.services.investigation_service import assemble_ticket_evidence, run_incident_investigation, InvestigationResponse
+from app.services.fixture_health_service import compute_all_fixture_health, get_fixture_health_detail
 from detection.sensor_health import SensorHealthTracker
 
 router = APIRouter(tags=["Events & Operations"])
@@ -159,6 +160,61 @@ class FacilityMetricsRead(BaseModel):
     total_anomalies: int = Field(..., description="Total anomalies detected all-time")
     water_cost_per_litre: float = Field(..., description="Configured water cost conversion factor in ₹/L")
     co2_per_litre: float = Field(..., description="Configured CO2 conversion factor in kg/L")
+
+
+class FixtureHealthSubScores(BaseModel):
+    frequency_score: float
+    recurrence_score: float
+    flow_drift_score: float
+    slow_leak_score: float
+    sensor_health_score: float
+    unresolved_score: float
+
+
+class FixtureIncidentSummary(BaseModel):
+    event_id: str
+    event_type: str
+    sub_type: Optional[str] = None
+    rule_label: str
+    detected_at: datetime
+    confidence_score: float
+    evidence_value: Optional[float] = None
+    ticket_id: Optional[str] = None
+    ticket_status: Optional[str] = None
+    priority_score: Optional[float] = None
+
+
+class FixtureHealthItem(BaseModel):
+    fixture_id: str
+    fixture_type: str
+    zone_id: str
+    zone_tier: str
+    health_score: float
+    risk_score: float
+    health_status: str
+    trend: str
+    total_incidents: int
+    active_tickets_count: int
+    leak_incidents_count: int
+    sensor_faults_count: int
+    hygiene_incidents_count: int
+    sub_scores: FixtureHealthSubScores
+    last_incident_at: Optional[datetime] = None
+    last_resolved_at: Optional[datetime] = None
+    recommendation: str
+
+
+class FixtureHealthListResponse(BaseModel):
+    facility_health_score: float
+    high_risk_count: int
+    degrading_count: int
+    watch_count: int
+    healthy_count: int
+    fixtures: List[FixtureHealthItem]
+
+
+class FixtureHealthDetailResponse(FixtureHealthItem):
+    recent_incidents: List[FixtureIncidentSummary]
 
 
 # ─────────────────────────────────────────────
@@ -476,6 +532,40 @@ async def list_hygiene_counters(
             )
         )
     return items
+
+
+@router.get(
+    "/fixtures/health",
+    response_model=FixtureHealthListResponse,
+    summary="List fixture predictive health & failure risk scores",
+    description="Retrieve live calculated predictive health scores, failure risk, trends, and recommendations across fixtures.",
+)
+async def list_fixture_health(
+    zone_id: Optional[str] = Query(None, description="Filter by zone ID"),
+    status: Optional[str] = Query(None, description="Filter by health status (healthy | watch | degrading | high_risk)"),
+    sort_by: str = Query("risk_desc", description="Sort order (risk_desc | health_asc | health_desc | incidents_desc)"),
+    db: AsyncSession = Depends(get_db),
+):
+    return await compute_all_fixture_health(db, zone_id=zone_id, status_filter=status, sort_by=sort_by)
+
+
+@router.get(
+    "/fixtures/{fixture_id}/health",
+    response_model=FixtureHealthDetailResponse,
+    summary="Get detailed predictive health score for single fixture",
+    description="Retrieve detailed health diagnostic breakdown, sub-scores, and recent incident history for a fixture.",
+)
+async def get_fixture_health(
+    fixture_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    detail = await get_fixture_health_detail(db, fixture_id=fixture_id)
+    if not detail:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Fixture {fixture_id} not found",
+        )
+    return detail
 
 
 @router.get(

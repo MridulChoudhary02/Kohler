@@ -42,7 +42,7 @@ def _collect_numbers_from_object(obj: Any) -> Set[float]:
         numbers.add(round(float(obj), 4))
     elif isinstance(obj, str):
         # Extract number tokens, including timestamps and identifiers
-        for m in re.findall(r"\b\d+(?:\.\d+)?\b", obj):
+        for m in re.findall(r"\d+(?:\.\d+)?", obj):
             try:
                 numbers.add(round(float(m), 4))
             except ValueError:
