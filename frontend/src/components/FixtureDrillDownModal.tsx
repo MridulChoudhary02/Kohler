@@ -1,9 +1,9 @@
 // frontend/src/components/FixtureDrillDownModal.tsx — View 4: Fixture Technical Evidence Modal (Evidence Timeline Spec)
 
 import React, { useState, useEffect } from 'react';
-import { X, BarChart2, Clock, Activity, Droplets, CheckCircle2, AlertTriangle, ArrowRight, Sparkles, Wrench, ShieldAlert, ListChecks, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
-import { DetectionEvent, Ticket, BaselineProfile, TelemetryReading, InvestigationReport } from '../lib/types';
-import { fetchFixtureBaseline, fetchFixtureTelemetry, fetchTickets, fetchTicketInvestigation } from '../lib/api';
+import { X, BarChart2, Clock, Activity, Droplets, CheckCircle2, AlertTriangle, ArrowRight, Sparkles, Wrench, ShieldAlert, ListChecks, Loader2, ChevronDown, ChevronUp, TrendingDown } from 'lucide-react';
+import { DetectionEvent, Ticket, BaselineProfile, TelemetryReading, InvestigationReport, TicketSustainabilityImpact } from '../lib/types';
+import { fetchFixtureBaseline, fetchFixtureTelemetry, fetchTickets, fetchTicketInvestigation, fetchTicketSustainabilityImpact } from '../lib/api';
 
 interface FixtureDrillDownModalProps {
   event: DetectionEvent | null;
@@ -52,6 +52,7 @@ export const FixtureDrillDownModal: React.FC<FixtureDrillDownModalProps> = ({
   const [investigating, setInvestigating] = useState<boolean>(false);
   const [investigationError, setInvestigationError] = useState<string | null>(null);
   const [showDiagnostics, setShowDiagnostics] = useState<boolean>(false);
+  const [sustainabilityImpact, setSustainabilityImpact] = useState<TicketSustainabilityImpact | null>(null);
 
   const fixtureId = event?.fixture_id || 'Unknown Fixture';
   const [activeTicket, setActiveTicket] = useState<Ticket | null>(ticket);
@@ -62,6 +63,18 @@ export const FixtureDrillDownModal: React.FC<FixtureDrillDownModalProps> = ({
     setInvestigationError(null);
     setInvestigating(false);
   }, [ticket, event?.event_id]);
+
+  useEffect(() => {
+    const currentTicketId = activeTicket?.ticket_id || ticket?.ticket_id;
+    const currentStatus = activeTicket?.status || ticket?.status;
+    if (currentTicketId && currentStatus === 'resolved') {
+      fetchTicketSustainabilityImpact(currentTicketId, 6.0)
+        .then((data) => setSustainabilityImpact(data))
+        .catch((err) => console.error('Error loading ticket sustainability impact:', err));
+    } else {
+      setSustainabilityImpact(null);
+    }
+  }, [activeTicket?.ticket_id, activeTicket?.status, ticket?.ticket_id, ticket?.status]);
 
   useEffect(() => {
     if (!fixtureId || fixtureId === 'Unknown Fixture') return;
@@ -148,6 +161,15 @@ export const FixtureDrillDownModal: React.FC<FixtureDrillDownModalProps> = ({
   const estimatedCostInr = baseline?.estimated_cost_inr_per_day ?? (lossRateLph > 0 ? Math.round(lossRateLph * 24 * 0.15 * 100) / 100 : 0.0);
   const confirmationWindowSeconds = baseline?.confirmation_window_seconds ?? (tier === 'Tier 1' ? 180 : tier === 'Tier 2' ? 300 : tier === 'Tier 3' ? 420 : 600);
   const lastFlushAt = baseline?.last_flush_at || null;
+
+  // Intervention Impact derived variables (strictly for Resolved tickets)
+  const isResolved = status === 'resolved' || activeTicket?.status === 'resolved' || ticket?.status === 'resolved';
+  const impactFlowLpm = lossRateLph > 0 ? lossRateLph / 60.0 : (sustainabilityImpact?.observed_flow_lpm ?? 0.0);
+  const impactDurationMins = durationSeconds > 0 ? durationSeconds / 60.0 : (sustainabilityImpact?.elapsed_minutes ?? 18.0);
+  const waterLostLiters = sustainabilityImpact?.prevented_waste?.actual_loss_liters ?? Number((impactFlowLpm * impactDurationMins).toFixed(1));
+  const estimatedAvoidedLiters = sustainabilityImpact?.prevented_waste?.estimated_water_saved_liters ?? Number(Math.max(0, impactFlowLpm * (impactDurationMins >= 360 ? impactDurationMins + 360 : 360) - (impactFlowLpm * impactDurationMins)).toFixed(1));
+  const avoidedCostInr = sustainabilityImpact?.prevented_waste?.avoided_cost_inr ?? Number((estimatedAvoidedLiters * 0.15).toFixed(2));
+  const lostCostInr = sustainabilityImpact?.prevented_waste?.cost_impact_inr ?? Number((waterLostLiters * 0.15).toFixed(2));
 
   // Compute trigger timestamp (candidate start = detected_at - confirmation window)
   let triggerTimeStr = 'T - 0m';
@@ -416,6 +438,133 @@ export const FixtureDrillDownModal: React.FC<FixtureDrillDownModalProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Section: Intervention Impact (Requirement 6 — Appears ONLY when ticket status is Resolved) */}
+        {isResolved && (
+          <div
+            id="intervention-impact-section"
+            style={{
+              background: 'linear-gradient(180deg, #0d1a14 0%, #0a120e 100%)',
+              border: '1px solid #166534',
+              borderRadius: '8px',
+              padding: '16px 18px',
+              marginBottom: '22px',
+              position: 'relative',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', borderBottom: '1px solid #14532d', paddingBottom: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ background: '#166534', padding: '6px', borderRadius: '6px' }}>
+                  <Droplets size={16} color="#86efac" />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#f0fdf4', letterSpacing: '0.02em', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    INTERVENTION IMPACT
+                    <span style={{ fontSize: '0.65rem', background: '#15803d', color: '#dcfce7', padding: '2px 7px', borderRadius: '10px', textTransform: 'uppercase', fontWeight: 600 }}>
+                      Resolved Incident
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.68rem', color: '#86efac', marginTop: '1px' }}>
+                    Incident water waste vs. 6-hour unaddressed counterfactual baseline
+                  </div>
+                </div>
+              </div>
+              <div style={{ fontSize: '0.7rem', color: '#4ade80', fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <CheckCircle2 size={13} color="#4ade80" />
+                <span>RESOLVED INTERVENTION</span>
+              </div>
+            </div>
+
+            {/* Stepped horizontal sequence / 3 Metric Tiles styled consistently with Evidence Timeline */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+              gap: '12px',
+              position: 'relative',
+              marginBottom: '10px',
+            }}>
+              {/* Tile 1: Water Lost During Incident */}
+              <div style={{
+                background: '#141417',
+                border: '1px solid #27272a',
+                borderRadius: '6px',
+                padding: '12px 14px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.68rem', color: '#f43f5e', fontWeight: 600 }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f43f5e' }} />
+                  WATER LOST DURING INCIDENT
+                </div>
+                <div className="font-mono" style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f43f5e' }}>
+                  {waterLostLiters.toFixed(1)} L
+                </div>
+                <div style={{ fontSize: '0.68rem', color: '#f59e0b' }} className="font-mono">
+                  Cost impact: ₹{lostCostInr.toFixed(2)}
+                </div>
+                <div style={{ fontSize: '0.65rem', color: '#71717a' }}>
+                  Incident active: {formatDuration(durationSeconds)}
+                </div>
+              </div>
+
+              {/* Tile 2: Estimated Water Avoided */}
+              <div style={{
+                background: '#141417',
+                border: '1px solid #27272a',
+                borderRadius: '6px',
+                padding: '12px 14px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.68rem', color: '#4ade80', fontWeight: 600 }}>
+                  <Droplets size={12} color="#4ade80" />
+                  ESTIMATED WATER AVOIDED
+                </div>
+                <div className="font-mono" style={{ fontSize: '1.25rem', fontWeight: 700, color: '#4ade80' }}>
+                  {estimatedAvoidedLiters.toFixed(1)} L
+                </div>
+                <div style={{ fontSize: '0.68rem', color: '#86efac' }}>
+                  Prevented continuous leak
+                </div>
+                <div style={{ fontSize: '0.65rem', color: '#71717a' }}>
+                  6h unaddressed counterfactual estimate
+                </div>
+              </div>
+
+              {/* Tile 3: Estimated Cost Saved */}
+              <div style={{
+                background: '#141417',
+                border: '1px solid #27272a',
+                borderRadius: '6px',
+                padding: '12px 14px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.68rem', color: '#38bdf8', fontWeight: 600 }}>
+                  <TrendingDown size={12} color="#38bdf8" />
+                  ESTIMATED COST SAVED
+                </div>
+                <div className="font-mono" style={{ fontSize: '1.25rem', fontWeight: 700, color: '#38bdf8' }}>
+                  ₹{avoidedCostInr.toFixed(2)}
+                </div>
+                <div style={{ fontSize: '0.68rem', color: '#a1a1aa' }}>
+                  ₹0.15 / L commercial tariff
+                </div>
+                <div style={{ fontSize: '0.65rem', color: '#71717a' }}>
+                  Avoided facility utility expense
+                </div>
+              </div>
+            </div>
+
+            {/* Clear estimate disclosure note */}
+            <div style={{ fontSize: '0.68rem', color: '#86efac', opacity: 0.85, fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span>* Estimated water saved is a counterfactual projection (observed flow rate projected forward against a 6-hour unaddressed baseline).</span>
+            </div>
+          </div>
+        )}
 
         {/* Section: AI Incident Investigator (Requirement 5) */}
         {(canInvestigate || investigation || investigating || investigationError) && (

@@ -184,4 +184,24 @@ export async function fetchFixtureHealthDetail(fixtureId: string): Promise<impor
   return res.json();
 }
 
+export async function fetchSustainabilitySummary(refWindowHours?: number): Promise<import('./types').SustainabilitySummary> {
+  const query = refWindowHours ? `?ref_window_hours=${refWindowHours}` : '';
+  const url = `${API_BASE_URL}/api/v1/sustainability/summary${query}`;
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch sustainability summary: ${res.statusText}`);
+  }
+  return res.json();
+}
+
+export async function fetchTicketSustainabilityImpact(ticketId: string, refWindowHours?: number): Promise<import('./types').TicketSustainabilityImpact> {
+  const query = refWindowHours ? `?ref_window_hours=${refWindowHours}` : '';
+  const url = `${API_BASE_URL}/api/v1/sustainability/ticket/${ticketId}${query}`;
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch ticket sustainability impact: ${res.statusText}`);
+  }
+  return res.json();
+}
+
 

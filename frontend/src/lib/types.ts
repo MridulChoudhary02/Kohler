@@ -165,4 +165,98 @@ export interface FixtureHealthDetailResponse extends FixtureHealthItem {
   recent_incidents: FixtureIncidentSummary[];
 }
 
+export interface TopWasteFixture {
+  fixture_id: string;
+  fixture_type: string;
+  zone_id: string;
+  zone_name: string;
+  waste_liters: number;
+  cost_impact_inr: number;
+}
+
+export interface TopWasteZone {
+  zone_id: string;
+  zone_name: string;
+  criticality_tier: string;
+  waste_liters: number;
+  cost_impact_inr: number;
+  incident_count: number;
+}
+
+export interface FacilityProjections {
+  plus_1hr_liters: number;
+  plus_1hr_cost_inr: number;
+  plus_6hr_liters: number;
+  plus_6hr_cost_inr: number;
+  plus_24hr_liters: number;
+  plus_24hr_cost_inr: number;
+  plus_7days_liters: number;
+  plus_7days_cost_inr: number;
+}
+
+export interface SustainabilitySummary {
+  water_waste_liters: number;
+  estimated_water_saved_liters: number;
+  cost_impact: number;
+  avoided_cost: number;
+  projected_unresolved_loss_liters: number;
+  highest_waste_fixture: TopWasteFixture | null;
+  highest_waste_zone: TopWasteZone | null;
+  top_waste_fixtures: TopWasteFixture[];
+  top_waste_zones: TopWasteZone[];
+  facility_projections: FacilityProjections;
+  active_tickets_count: number;
+  active_leak_tickets_count: number;
+  resolved_tickets_count: number;
+  resolved_leaks_with_impact_count: number;
+  tariff_inr_per_liter: number;
+  reference_window_hours: number;
+  estimate_disclosure: string;
+}
+
+export interface PreventedWasteImpact {
+  observed_flow_lpm: number;
+  elapsed_minutes: number;
+  actual_loss_liters: number;
+  potential_loss_liters: number;
+  estimated_water_saved_liters: number;
+  avoided_cost_inr: number;
+  cost_impact_inr: number;
+  reference_window_minutes: number;
+}
+
+export interface TicketProjections {
+  observed_flow_lpm: number;
+  projected_loss_1h_liters: number;
+  projected_cost_1h_inr: number;
+  projected_loss_6h_liters: number;
+  projected_cost_6h_inr: number;
+  projected_loss_24h_liters: number;
+  projected_cost_24h_inr: number;
+  projected_loss_7d_liters: number;
+  projected_cost_7d_inr: number;
+}
+
+export interface TicketSustainabilityImpact {
+  ticket_id: string;
+  event_id: string;
+  fixture_id: string;
+  fixture_type: string;
+  zone_name: string;
+  status: string;
+  event_type: string;
+  observed_flow_lpm: number;
+  observed_flow_lph: number;
+  detected_at?: string | null;
+  started_at?: string | null;
+  resolved_at?: string | null;
+  elapsed_minutes?: number | null;
+  is_resolved: boolean;
+  has_valid_impact: boolean;
+  prevented_waste?: PreventedWasteImpact | null;
+  projections: TicketProjections;
+  tariff_inr_per_liter: number;
+  reference_window_hours: number;
+}
+
 

@@ -34,6 +34,7 @@ export const Header: React.FC<HeaderProps> = (props) => {
     { href: '/', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/tickets', label: 'Tickets', icon: TicketIcon },
     { href: '/fixtures/health', label: 'Fixture Health', icon: Activity },
+    { href: '/sustainability', label: 'Sustainability', icon: Droplets },
   ];
 
 

@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.services.detection_service import detection_service
-from app.api import telemetry, events
+from app.api import telemetry, events, sustainability
 
 
 @asynccontextmanager
@@ -48,3 +48,4 @@ async def health_check():
 # Phase 4 Routers
 app.include_router(telemetry.router, prefix="/api/v1")
 app.include_router(events.router, prefix="/api/v1")
+app.include_router(sustainability.router, prefix="/api/v1")
