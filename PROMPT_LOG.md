@@ -1014,3 +1014,54 @@ Separately: update docs/ACCURACY_REPORT.md — the total labeled-anomaly count s
    - Ran full `pytest detection/tests/` suite post-merge on `main`: 23 passed in 66.46s.
    - Removed transient generated runner output `backend/simulator/output/detection_events.jsonl` from git tracking and updated `.gitignore` so subsequent validation runs do not create git diffs.
 
+---
+
+## [2026-09-20 12:55] — Feature: Evidence Timeline Fields & Alembic Migration
+
+**Trigger:** User instruction to extend the evidence surfaced in the fixture drill-down modal to cover the full "Evidence Timeline" specification, backed by a proper Alembic migration.
+
+**Prompt/instruction used:**
+On a new branch feature/evidence-timeline-fields: extend the evidence surfaced in the fixture drill-down to cover the full "Evidence Timeline" spec.
+Backend changes:
+1. Add sub_type/detection_rule as a real column already exists (check first — sub_type already appears in detection_events per the gradual leak work; if so just expose it via GET /api/v1/events instead of adding a new column) with human-readable labels.
+2. Add anomaly_duration_seconds: compute as (resolved_at or now) - detected_at, expose on GET /api/v1/tickets/{id} or /events/{id}.
+3. Add per-fixture sensor_health_score to GET /api/v1/fixtures/{id}/baseline.
+4. Add estimated_cost_inr_per_day to the same endpoint: evidence_value(L/hr) × 24 × WATER_COST_INR_PER_LITRE.
+5. Expose confirmation_window_seconds per tier.
+6. Expose last_flush_at per fixture.
+Frontend changes:
+Update FixtureDrillDownModal.tsx to present these fields cleanly in the Evidence Timeline layout.
+Alembic migration:
+Generate a real Alembic migration for sub_type on detection_events, prove round-trip downgrade/upgrade, and verify with pytest and npm run build.
+
+**Action taken:**
+1. Database Schema & Migration:
+   - Created real Alembic migration `backend/alembic/versions/5766d0370fc0_add_sub_type_to_detection_events.py` (Revision ID: `5766d0370fc0`, Revises: `0005_ticket_started_at`).
+   - Cleanly implemented `upgrade()` with `op.add_column('detection_events', sa.Column('sub_type', sa.String(length=50), nullable=True))` and `downgrade()` with `op.drop_column('detection_events', 'sub_type')`.
+   - Verified clean migration round-trip via `alembic downgrade -1 && alembic upgrade head`.
+   - Confirmed `alembic current` records `5766d0370fc0 (head)`.
+   - Verified column `sub_type character varying NULL` in PostgreSQL `information_schema.columns`.
+2. Backend Models & API Endpoints:
+   - `backend/app/models/models.py`: Added `sub_type = Column(String(50), nullable=True)` to `DetectionEvent`.
+   - `backend/app/api/telemetry.py`: Updated `DetectionEvent` persistence to store `sub_type`.
+   - `backend/app/api/events.py`:
+     - Added `sub_type`, `detection_rule`, and `anomaly_duration_seconds` to `DetectionEventRead`.
+     - Added `anomaly_duration_seconds` to `TicketRead` (`(resolved_at or utcnow) - detected_at`).
+     - Added `sensor_health_score`, `estimated_cost_inr_per_day`, `confirmation_window_seconds`, and `last_flush_at` to `BaselineProfileRead`.
+     - Implemented `resolve_detection_rule` helper mapping sub_types (`ewma_ucl_breach`, `stuck_valve_persistence`, `gradual_leak_trend`, etc.) to human-readable rule names.
+     - Implemented fixture-scoped `SensorHealthTracker` calculation computing live health score ($0.0 - 1.0$) over 7 days of readings.
+     - Implemented water cost projection ($L/\text{hr} \times 24 \times ₹0.05/\text{L}$).
+3. Frontend Implementation:
+   - `frontend/src/lib/types.ts`: Extended `DetectionEvent`, `Ticket`, and `BaselineProfile` interfaces.
+   - `frontend/src/lib/api.ts`: Updated `fetchFixtureBaseline` signature to accept `detectedAt` and `evidenceValue` parameters.
+   - `frontend/src/components/FixtureDrillDownModal.tsx`: Complete redesign matching blueprint Evidence Timeline specifications:
+     - Top Hero Metrics: Estimated Loss Rate (LPH), Daily Cost at Risk (₹), Priority Score (0–100), Engine Confidence (%).
+     - 4-Step Incident Progression Timeline: 1. Trigger Start, 2. Confirmation Window (Tier-specific 60s/180s/300s/600s), 3. Dispatched, 4. Current State (elapsed duration).
+     - Statistical Baseline & Diagnostics Grid: Current Flow, Mean Idle Flow, UCL, Occupancy State, Last Flush Recorded, Warmup Adaptation, Sensor Health Score.
+     - Telemetry History Bar Chart with mean idle and UCL reference overlays.
+     - Diagnostic Incident Narrative detailing breach margins, sensor reliability, and escalation status.
+4. Validation & Quality Checks:
+   - Headless Chrome CDP verified modal rendering against real ticket `#d6ecc0d5` on `http://localhost:3000/tickets`: all 18 Evidence Timeline fields rendered with live DB values.
+   - `npm run build`: Compiled 7/7 static routes with 0 errors.
+   - `pytest detection/tests/`: 23 passed in 57.49s.
+   - Branch `feature/evidence-timeline-fields` merged into `main`.
