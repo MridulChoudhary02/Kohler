@@ -25,6 +25,7 @@ from sqlalchemy.future import select
 from sqlalchemy import func
 
 from app.core.config import settings
+from app.core.database import get_data_now
 from app.models.models import Ticket, DetectionEvent, Fixture, Zone, BaselineProfile, Sensor, TelemetryReading
 from detection.sensor_health import SensorHealthTracker
 
@@ -95,7 +96,7 @@ async def assemble_ticket_evidence(ticket_id: str, db: AsyncSession) -> Dict[str
     if not event:
         raise ValueError(f"Detection event for ticket '{ticket_id}' not found")
 
-    now_utc = datetime.now(timezone.utc)
+    now_utc = await get_data_now(db)
     ev_dt = event.detected_at if event.detected_at.tzinfo else event.detected_at.replace(tzinfo=timezone.utc)
     end_dt = ticket.resolved_at or now_utc
     if end_dt.tzinfo is None:

@@ -124,10 +124,9 @@ async def compute_all_fixture_health(
     profiles = get_baseline_profiles()
 
     # Determine reference max timestamp in telemetry/events
-    res_t = await db.execute(select(func.max(DetectionEvent.detected_at)))
-    max_dt = res_t.scalar() or datetime.now(timezone.utc)
-    if max_dt.tzinfo is None:
-        max_dt = max_dt.replace(tzinfo=timezone.utc)
+    # Use data-driven reference 'now' (max of detection/telemetry timestamps)
+    from app.core.database import get_data_now
+    max_dt = await get_data_now(db)
 
     t_24h = max_dt - timedelta(hours=24)
     t_72h = max_dt - timedelta(hours=72)

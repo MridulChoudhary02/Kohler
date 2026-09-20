@@ -171,7 +171,8 @@ async def escalate_overdue_tickets(
     Finds open tickets past their sla_due timestamp and boosts priority_score by +25.
     """
     if now is None:
-        now = datetime.now(timezone.utc)
+        from app.core.database import get_data_now
+        now = await get_data_now(db)
     elif now.tzinfo is None:
         now = now.replace(tzinfo=timezone.utc)
 

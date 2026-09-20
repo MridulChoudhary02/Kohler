@@ -17,7 +17,7 @@ from sqlalchemy import select, func, case
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.database import get_db
+from app.core.database import get_db, get_data_now
 from app.models.models import DetectionEvent, Fixture, Zone, Ticket, HygieneCounter, BaselineProfile, Sensor, TelemetryReading
 from app.services.llm_service import summarize_incident, answer_facility_query, FALLBACK_SUMMARY
 from app.services.investigation_service import assemble_ticket_evidence, run_incident_investigation, InvestigationResponse
@@ -263,7 +263,7 @@ async def list_events(
     res = await db.execute(stmt)
     rows = res.all()
 
-    now_utc = datetime.now(timezone.utc)
+    now_utc = await get_data_now(db)
     items = []
     for ev, ftype, zid, zname, tier, ticket_resolved in rows:
         end_dt = ticket_resolved or now_utc
@@ -328,7 +328,7 @@ async def get_event(
         )
 
     ev, ftype, zid, zname, tier, ticket_resolved = row
-    now_utc = datetime.now(timezone.utc)
+    now_utc = await get_data_now(db)
     end_dt = ticket_resolved or now_utc
     ev_dt = ev.detected_at if ev.detected_at.tzinfo else ev.detected_at.replace(tzinfo=timezone.utc)
     if end_dt.tzinfo is None:
@@ -385,7 +385,7 @@ async def list_tickets(
     res = await db.execute(stmt)
     rows = res.all()
 
-    now_utc = datetime.now(timezone.utc)
+    now_utc = await get_data_now(db)
     items = []
     for ticket, ev_detected in rows:
         dur_s = None
