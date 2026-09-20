@@ -156,3 +156,32 @@ export async function fetchTicketInvestigation(ticketId: string): Promise<import
   return res.json();
 }
 
+export async function fetchFixtureHealthList(params?: {
+  zone_id?: string;
+  status?: string;
+  sort_by?: string;
+}): Promise<import('./types').FixtureHealthListResponse> {
+  const query = new URLSearchParams();
+  if (params?.zone_id) query.set('zone_id', params.zone_id);
+  if (params?.status) query.set('status', params.status);
+  if (params?.sort_by) query.set('sort_by', params.sort_by);
+
+  const qs = query.toString();
+  const url = `${API_BASE_URL}/api/v1/fixtures/health${qs ? `?${qs}` : ''}`;
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch fixture health list: ${res.statusText}`);
+  }
+  return res.json();
+}
+
+export async function fetchFixtureHealthDetail(fixtureId: string): Promise<import('./types').FixtureHealthDetailResponse> {
+  const url = `${API_BASE_URL}/api/v1/fixtures/${fixtureId}/health`;
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch fixture health detail for ${fixtureId}: ${res.statusText}`);
+  }
+  return res.json();
+}
+
+

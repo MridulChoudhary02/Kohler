@@ -110,3 +110,59 @@ export interface InvestigationResponse {
   error: string | null;
 }
 
+export interface FixtureHealthSubScores {
+  frequency_score: number;
+  recurrence_score: number;
+  flow_drift_score: number;
+  slow_leak_score: number;
+  sensor_health_score: number;
+  unresolved_score: number;
+}
+
+export interface FixtureIncidentSummary {
+  event_id: string;
+  event_type: string;
+  sub_type: string | null;
+  rule_label: string;
+  detected_at: string;
+  confidence_score: number;
+  evidence_value: number | null;
+  ticket_id: string | null;
+  ticket_status: string | null;
+  priority_score: number | null;
+}
+
+export interface FixtureHealthItem {
+  fixture_id: string;
+  fixture_type: string;
+  zone_id: string;
+  zone_tier: string;
+  health_score: number;
+  risk_score: number;
+  health_status: 'healthy' | 'watch' | 'degrading' | 'high_risk';
+  trend: 'stable' | 'deteriorating' | 'improving';
+  total_incidents: number;
+  active_tickets_count: number;
+  leak_incidents_count: number;
+  sensor_faults_count: number;
+  hygiene_incidents_count: number;
+  sub_scores: FixtureHealthSubScores;
+  last_incident_at: string | null;
+  last_resolved_at: string | null;
+  recommendation: string;
+}
+
+export interface FixtureHealthListResponse {
+  facility_health_score: number;
+  high_risk_count: number;
+  degrading_count: number;
+  watch_count: number;
+  healthy_count: number;
+  fixtures: FixtureHealthItem[];
+}
+
+export interface FixtureHealthDetailResponse extends FixtureHealthItem {
+  recent_incidents: FixtureIncidentSummary[];
+}
+
+

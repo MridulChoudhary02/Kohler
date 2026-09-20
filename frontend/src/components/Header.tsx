@@ -5,7 +5,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Droplets, LayoutDashboard, Ticket as TicketIcon, Bell, Sparkles } from 'lucide-react';
+import { Droplets, LayoutDashboard, Ticket as TicketIcon, Bell, Sparkles, Activity } from 'lucide-react';
 import { useDashboard } from '../lib/DashboardContext';
 import { DetectionEvent, Ticket } from '../lib/types';
 
@@ -34,6 +34,7 @@ export const Header: React.FC<HeaderProps> = (props) => {
     { href: '/', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/tickets', label: 'Tickets', icon: TicketIcon },
     { href: '/alerts', label: 'Alerts', icon: Bell },
+    { href: '/fixtures/health', label: 'Fixture Health', icon: Activity },
   ];
 
 
@@ -162,7 +163,7 @@ export const Header: React.FC<HeaderProps> = (props) => {
         gap: '4px',
       }}>
         {navItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
           const Icon = item.icon;
           return (
             <Link
