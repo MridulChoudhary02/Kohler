@@ -110,6 +110,7 @@ async def ingest_telemetry(
             event_id=ev_id,
             fixture_id=fid,
             event_type=ev_type,
+            sub_type=ev.get("sub_type"),
             confidence_score=conf,
             evidence_value=evidence,
             detected_at=ev_ts,

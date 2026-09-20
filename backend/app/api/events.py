@@ -28,10 +28,37 @@ router = APIRouter(tags=["Events & Operations"])
 # ─────────────────────────────────────────────
 # PYDANTIC RESPONSE SCHEMAS
 # ─────────────────────────────────────────────
+DETECTION_RULE_LABELS: dict[str, str] = {
+    "ucl": "EWMA/UCL sustained breach",
+    "ucl_sustained_breach": "EWMA/UCL sustained breach",
+    "stuck_valve": "Post-flush persistence (stuck valve)",
+    "gradual_leak": "Trend regression (gradual leak)",
+    "gradual_leak_warning": "Trend regression warning",
+    "sensor_flatline": "Sensor variance collapse (flatline)",
+    "sensor_dropout": "Sensor dropout / ingestion gap",
+    "predictive_hygiene": "Predictive hygiene threshold breach",
+}
+
+def resolve_detection_rule(event_type: str, sub_type: Optional[str] = None) -> str:
+    if sub_type and sub_type in DETECTION_RULE_LABELS:
+        return DETECTION_RULE_LABELS[sub_type]
+    if event_type == "leak":
+        return "EWMA/UCL sustained breach"
+    elif event_type == "hygiene":
+        return "Predictive hygiene threshold breach"
+    elif event_type == "sensor_fault":
+        return "Sensor diagnostics anomaly"
+    elif event_type == "gradual_leak_warning":
+        return "Trend regression warning"
+    return "Standard statistical rule"
+
+
 class DetectionEventRead(BaseModel):
     event_id: str
     fixture_id: str
     event_type: str
+    sub_type: Optional[str] = None
+    detection_rule: Optional[str] = None
     confidence_score: float
     evidence_value: Optional[float] = None
     detected_at: datetime
@@ -40,6 +67,7 @@ class DetectionEventRead(BaseModel):
     zone_id: Optional[str] = None
     zone_name: Optional[str] = None
     criticality_tier: Optional[str] = None
+    anomaly_duration_seconds: Optional[float] = None
 
     class Config:
         from_attributes = True
@@ -59,6 +87,7 @@ class TicketRead(BaseModel):
     acknowledged_at: Optional[datetime] = None
     started_at: Optional[datetime] = None
     resolved_at: Optional[datetime] = None
+    anomaly_duration_seconds: Optional[float] = None
 
     class Config:
         from_attributes = True
@@ -83,6 +112,10 @@ class BaselineProfileRead(BaseModel):
     ucl: float
     warmup_complete: bool
     last_updated: datetime
+    sensor_health_score: float = 1.0
+    estimated_cost_inr_per_day: float = 0.0
+    confirmation_window_seconds: int = 180
+    last_flush_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -146,9 +179,17 @@ async def list_events(
     db: AsyncSession = Depends(get_db),
 ):
     stmt = (
-        select(DetectionEvent, Fixture.fixture_type, Zone.zone_id, Zone.name.label("zone_name"), Zone.criticality_tier)
+        select(
+            DetectionEvent,
+            Fixture.fixture_type,
+            Zone.zone_id,
+            Zone.name.label("zone_name"),
+            Zone.criticality_tier,
+            Ticket.resolved_at,
+        )
         .join(Fixture, DetectionEvent.fixture_id == Fixture.fixture_id)
         .join(Zone, Fixture.zone_id == Zone.zone_id)
+        .outerjoin(Ticket, DetectionEvent.event_id == Ticket.event_id)
     )
 
     if fixture_id:
@@ -165,13 +206,24 @@ async def list_events(
     res = await db.execute(stmt)
     rows = res.all()
 
+    now_utc = datetime.now(timezone.utc)
     items = []
-    for ev, ftype, zid, zname, tier in rows:
+    for ev, ftype, zid, zname, tier, ticket_resolved in rows:
+        end_dt = ticket_resolved or now_utc
+        ev_dt = ev.detected_at if ev.detected_at.tzinfo else ev.detected_at.replace(tzinfo=timezone.utc)
+        if end_dt.tzinfo is None:
+            end_dt = end_dt.replace(tzinfo=timezone.utc)
+        dur_s = round(max(0.0, (end_dt - ev_dt).total_seconds()), 1)
+        sub_type = getattr(ev, "sub_type", None)
+        rule_label = resolve_detection_rule(ev.event_type, sub_type)
+
         items.append(
             DetectionEventRead(
                 event_id=ev.event_id,
                 fixture_id=ev.fixture_id,
                 event_type=ev.event_type,
+                sub_type=sub_type,
+                detection_rule=rule_label,
                 confidence_score=ev.confidence_score,
                 evidence_value=ev.evidence_value,
                 detected_at=ev.detected_at,
@@ -180,6 +232,7 @@ async def list_events(
                 zone_id=zid,
                 zone_name=zname,
                 criticality_tier=tier,
+                anomaly_duration_seconds=dur_s,
             )
         )
     return items
@@ -196,9 +249,17 @@ async def get_event(
     db: AsyncSession = Depends(get_db),
 ):
     stmt = (
-        select(DetectionEvent, Fixture.fixture_type, Zone.zone_id, Zone.name.label("zone_name"), Zone.criticality_tier)
+        select(
+            DetectionEvent,
+            Fixture.fixture_type,
+            Zone.zone_id,
+            Zone.name.label("zone_name"),
+            Zone.criticality_tier,
+            Ticket.resolved_at,
+        )
         .join(Fixture, DetectionEvent.fixture_id == Fixture.fixture_id)
         .join(Zone, Fixture.zone_id == Zone.zone_id)
+        .outerjoin(Ticket, DetectionEvent.event_id == Ticket.event_id)
         .where(DetectionEvent.event_id == event_id)
     )
     res = await db.execute(stmt)
@@ -209,11 +270,22 @@ async def get_event(
             detail=f"Detection event {event_id} not found",
         )
 
-    ev, ftype, zid, zname, tier = row
+    ev, ftype, zid, zname, tier, ticket_resolved = row
+    now_utc = datetime.now(timezone.utc)
+    end_dt = ticket_resolved or now_utc
+    ev_dt = ev.detected_at if ev.detected_at.tzinfo else ev.detected_at.replace(tzinfo=timezone.utc)
+    if end_dt.tzinfo is None:
+        end_dt = end_dt.replace(tzinfo=timezone.utc)
+    dur_s = round(max(0.0, (end_dt - ev_dt).total_seconds()), 1)
+    sub_type = getattr(ev, "sub_type", None)
+    rule_label = resolve_detection_rule(ev.event_type, sub_type)
+
     return DetectionEventRead(
         event_id=ev.event_id,
         fixture_id=ev.fixture_id,
         event_type=ev.event_type,
+        sub_type=sub_type,
+        detection_rule=rule_label,
         confidence_score=ev.confidence_score,
         evidence_value=ev.evidence_value,
         detected_at=ev.detected_at,
@@ -222,6 +294,7 @@ async def get_event(
         zone_id=zid,
         zone_name=zname,
         criticality_tier=tier,
+        anomaly_duration_seconds=dur_s,
     )
 
 
@@ -239,7 +312,10 @@ async def list_tickets(
     offset: int = Query(0, ge=0, description="Page offset"),
     db: AsyncSession = Depends(get_db),
 ):
-    stmt = select(Ticket)
+    stmt = (
+        select(Ticket, DetectionEvent.detected_at)
+        .outerjoin(DetectionEvent, Ticket.event_id == DetectionEvent.event_id)
+    )
     if status:
         stmt = stmt.where(Ticket.status == status)
     if zone_id:
@@ -250,8 +326,38 @@ async def list_tickets(
     stmt = stmt.order_by(Ticket.priority_score.desc()).offset(offset).limit(limit)
 
     res = await db.execute(stmt)
-    tickets = res.scalars().all()
-    return tickets
+    rows = res.all()
+
+    now_utc = datetime.now(timezone.utc)
+    items = []
+    for ticket, ev_detected in rows:
+        dur_s = None
+        if ev_detected:
+            end_dt = ticket.resolved_at or now_utc
+            ev_dt = ev_detected if ev_detected.tzinfo else ev_detected.replace(tzinfo=timezone.utc)
+            if end_dt.tzinfo is None:
+                end_dt = end_dt.replace(tzinfo=timezone.utc)
+            dur_s = round(max(0.0, (end_dt - ev_dt).total_seconds()), 1)
+
+        items.append(
+            TicketRead(
+                ticket_id=ticket.ticket_id,
+                event_id=ticket.event_id,
+                zone_id=ticket.zone_id,
+                priority_score=ticket.priority_score,
+                status=ticket.status,
+                sla_due=ticket.sla_due,
+                assigned_team=ticket.assigned_team,
+                assigned_tech_id=ticket.assigned_tech_id,
+                is_escalated=ticket.is_escalated,
+                summary_text=ticket.summary_text,
+                acknowledged_at=ticket.acknowledged_at,
+                started_at=ticket.started_at,
+                resolved_at=ticket.resolved_at,
+                anomaly_duration_seconds=dur_s,
+            )
+        )
+    return items
 
 
 @router.post(
@@ -375,10 +481,12 @@ async def list_hygiene_counters(
     "/fixtures/{fixture_id}/baseline",
     response_model=BaselineProfileRead,
     summary="Get baseline profile for fixture",
-    description="Retrieve baseline statistical profile and UCL for a fixture.",
+    description="Retrieve baseline statistical profile, UCL, and live evidence metrics for a fixture.",
 )
 async def get_fixture_baseline(
     fixture_id: str,
+    detected_at: Optional[str] = Query(None, description="ISO timestamp around which to evaluate evidence"),
+    evidence_value: Optional[float] = Query(None, description="Evidence value (L/hr waste rate)"),
     db: AsyncSession = Depends(get_db),
 ):
     stmt = select(BaselineProfile).where(BaselineProfile.fixture_id == fixture_id)
@@ -390,6 +498,81 @@ async def get_fixture_baseline(
             detail=f"Baseline profile for fixture {fixture_id} not found",
         )
     ucl = round(bp.mean_off_flow + 3.0 * bp.std_off_flow, 4)
+
+    # 1. Tier and Confirmation Window (seconds)
+    fix_stmt = (
+        select(Fixture, Zone.criticality_tier)
+        .join(Zone, Fixture.zone_id == Zone.zone_id)
+        .where(Fixture.fixture_id == fixture_id)
+    )
+    fix_res = await db.execute(fix_stmt)
+    fix_row = fix_res.first()
+    tier = fix_row[1] if fix_row else "Tier 1"
+    window_min = settings.confirmation_windows.get(tier, 5)
+    confirmation_window_seconds = int(window_min * 60)
+
+    # 2. Sensor ID for fixture
+    sensor_stmt = select(Sensor.sensor_id).where(Sensor.fixture_id == fixture_id)
+    sensor_res = await db.execute(sensor_stmt)
+    sensor_id = sensor_res.scalar_one_or_none()
+
+    # 3. Sensor Health Score
+    sensor_health_score = 1.0
+    if sensor_id:
+        tracker = SensorHealthTracker(sensor_id=sensor_id, fixture_id=fixture_id, zone_tier=tier)
+        readings_stmt = (
+            select(
+                TelemetryReading.timestamp,
+                TelemetryReading.flow_rate_lpm,
+                TelemetryReading.occupancy_state,
+                TelemetryReading.diagnostic_status,
+            )
+            .where(TelemetryReading.sensor_id == sensor_id)
+            .order_by(TelemetryReading.timestamp.desc())
+            .limit(120)
+        )
+        readings = (await db.execute(readings_stmt)).fetchall()
+        for r in reversed(readings):
+            sensor_health_score, _ = tracker.process_reading({
+                "timestamp": r[0],
+                "flow_rate_lpm": r[1],
+                "occupancy_state": r[2],
+                "diagnostic_status": r[3],
+            })
+        sensor_health_score = round(sensor_health_score, 4)
+
+    # 4. Last flush timestamp before detected_at
+    last_flush_at = None
+    if sensor_id:
+        flush_stmt = (
+            select(func.max(TelemetryReading.timestamp))
+            .where(
+                TelemetryReading.sensor_id == sensor_id,
+                TelemetryReading.flush_event == 1,
+            )
+        )
+        if detected_at:
+            try:
+                target_dt = datetime.fromisoformat(detected_at.replace("Z", "+00:00"))
+                if target_dt.tzinfo is None:
+                    target_dt = target_dt.replace(tzinfo=timezone.utc)
+                flush_stmt = flush_stmt.where(TelemetryReading.timestamp <= target_dt)
+            except Exception:
+                pass
+        last_flush_at = (await db.execute(flush_stmt)).scalar()
+
+    # 5. Estimated cost in INR per day: evidence_value(L/hr) × 24 × WATER_COST_INR_PER_LITRE
+    ev_val = evidence_value
+    if ev_val is None:
+        ev_stmt = (
+            select(DetectionEvent.evidence_value)
+            .where(DetectionEvent.fixture_id == fixture_id, DetectionEvent.event_type == "leak")
+            .order_by(DetectionEvent.detected_at.desc())
+            .limit(1)
+        )
+        ev_val = (await db.execute(ev_stmt)).scalar()
+    estimated_cost_inr_per_day = round(float(ev_val or 0.0) * 24.0 * settings.WATER_COST_INR_PER_LITRE, 2)
+
     return BaselineProfileRead(
         fixture_id=bp.fixture_id,
         mean_off_flow=bp.mean_off_flow,
@@ -399,6 +582,10 @@ async def get_fixture_baseline(
         ucl=ucl,
         warmup_complete=bp.warmup_complete,
         last_updated=bp.last_updated,
+        sensor_health_score=sensor_health_score,
+        estimated_cost_inr_per_day=estimated_cost_inr_per_day,
+        confirmation_window_seconds=confirmation_window_seconds,
+        last_flush_at=last_flush_at,
     )
 
 

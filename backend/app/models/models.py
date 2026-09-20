@@ -145,6 +145,7 @@ class DetectionEvent(Base):
     event_id        = Column(String(36), primary_key=True, default=new_uuid)
     fixture_id      = Column(String(36), ForeignKey("fixtures.fixture_id"), nullable=False)
     event_type      = Column(String(50), nullable=False)   # leak | hygiene | sensor_fault
+    sub_type        = Column(String(50), nullable=True)    # gradual_leak | stuck_valve | sensor_flatline | etc.
     confidence_score = Column(Float, nullable=False)
     evidence_value  = Column(Float, nullable=True)          # litres/hr estimated waste, or predicted breach minutes
     detected_at     = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)

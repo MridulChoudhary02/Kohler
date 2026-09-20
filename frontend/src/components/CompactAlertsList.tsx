@@ -66,6 +66,7 @@ export const CompactAlertsList: React.FC<CompactAlertsListProps> = ({
             return (
               <div
                 key={ev.event_id}
+                data-testid="compact-alert-item"
                 onClick={() => onSelectEvent(ev)}
                 style={{
                   padding: '12px 4px',

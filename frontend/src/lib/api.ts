@@ -106,8 +106,15 @@ export async function fetchHygieneCounters(fixtureId?: string): Promise<HygieneC
   return res.json();
 }
 
-export async function fetchFixtureBaseline(fixtureId: string): Promise<BaselineProfile | null> {
-  const url = `${API_BASE_URL}/api/v1/fixtures/${fixtureId}/baseline`;
+export async function fetchFixtureBaseline(
+  fixtureId: string,
+  detectedAt?: string,
+  evidenceValue?: number
+): Promise<BaselineProfile | null> {
+  const query = new URLSearchParams();
+  if (detectedAt) query.set('detected_at', detectedAt);
+  if (evidenceValue !== undefined && evidenceValue !== null) query.set('evidence_value', String(evidenceValue));
+  const url = `${API_BASE_URL}/api/v1/fixtures/${fixtureId}/baseline${query.toString() ? `?${query.toString()}` : ''}`;
   const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) return null;
   return res.json();

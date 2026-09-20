@@ -6,6 +6,8 @@ export interface DetectionEvent {
   event_id: string;
   fixture_id: string;
   event_type: 'leak' | 'hygiene' | 'sensor_fault' | string;
+  sub_type?: string | null;
+  detection_rule?: string | null;
   confidence_score: number;
   evidence_value: number | null;
   detected_at: string;
@@ -14,6 +16,7 @@ export interface DetectionEvent {
   zone_id?: string;
   zone_name?: string;
   criticality_tier?: ZoneTier;
+  anomaly_duration_seconds?: number | null;
 }
 
 export interface Ticket {
@@ -30,6 +33,7 @@ export interface Ticket {
   acknowledged_at: string | null;
   started_at: string | null;
   resolved_at: string | null;
+  anomaly_duration_seconds?: number | null;
 }
 
 export interface HygieneCounter {
@@ -62,6 +66,10 @@ export interface BaselineProfile {
   ucl: number;
   warmup_complete: boolean;
   last_updated: string;
+  sensor_health_score?: number;
+  estimated_cost_inr_per_day?: number;
+  confirmation_window_seconds?: number;
+  last_flush_at?: string | null;
 }
 
 export interface ZoneSummary {
