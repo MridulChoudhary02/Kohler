@@ -69,3 +69,10 @@ To ensure high sensitivity does not induce false alarms during normal hospital o
    - **Baseline Freeze Protection:** When `is_suspicious` is flagged, the EWMA adaptation loop in `engine.py` freezes adaptation, preventing the creeping micro-leak from being absorbed into the baseline profile.
 3. **Sensor Health Tracker (`detection/sensor_health.py`):**
    - Isolates sensor anomalies (dropout, flatline, drift, out-of-range) from plumbing leaks.
+
+---
+
+## 5. Known Limitations
+
+- **Nocturnal Anomaly Coverage on Specific Fixtures (`fix-ot-002` & `fix-ot-003`):**  
+  While `fix-ot-001` contains a daytime gradual leak evaluated in the benchmark corpus (`anom-fix-ot-001-gradual_leak-0800`, detected at 48.5 min latency matching pre-shrinkage), the labeled anomaly corpus (`combined_anomaly_labels.json`) contains no injected anomaly events for `fix-ot-002` or `fix-ot-003`. Consequently, empirical detection latency and sensitivity for leaks occurring specifically during the night window (22:00–06:00 UTC) on `fix-ot-002` and `fix-ot-003` cannot be directly scored against ground truth in this benchmark corpus and rely on statistical safety bounds established by empirical Bayes shrinkage ($k = 6,720$).

@@ -41,6 +41,14 @@ BASELINE_WARMUP_DAYS: int = 7
 EWMA_LAMBDA: float        = 0.2
 UCL_L_FACTOR: float       = 3.0
 
+CONTEXT_ADAPTIVE_BASELINE_ENABLED: bool = True
+CONTEXT_DAY_START_HOUR: int = 6
+CONTEXT_DAY_END_HOUR: int = 22
+CONTEXT_MIN_SAMPLE_COUNT: int = 60
+CONTEXT_GATE_Z_THRESHOLD: float = 3.0
+CONTEXT_GATE_REL_DIFF_THRESHOLD: float = 0.25
+CONTEXT_SHRINKAGE_PSEUDO_COUNT_K: int = 6720
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # WELFORD ONLINE ACCUMULATOR
@@ -104,12 +112,57 @@ class BaselineProfile:
     warmup_started_at:   Optional[str] = None
     warmup_completed_at: Optional[str] = None
 
+    # Context-adaptive baseline windows (Day: 06:00-22:00, Night: 22:00-06:00)
+    day_baseline:        Optional[dict[str, Any]] = None
+    night_baseline:      Optional[dict[str, Any]] = None
+    split_enabled:       bool = False
+    gate_z_score:        Optional[float] = None
+    gate_rel_diff:       Optional[float] = None
+
+    def get_active_baseline(
+        self,
+        ts: datetime,
+        adaptive_enabled: bool = True,
+        min_samples: int = CONTEXT_MIN_SAMPLE_COUNT,
+    ) -> tuple[float, float, float, str, bool]:
+        """
+        Determine active (mean, std, ucl, window_name, is_fallback) for reading at ts.
+        """
+        if not adaptive_enabled or not self.split_enabled:
+            return self.mean_idle_flow, self.std_idle_flow, self.ucl, "combined", False
+
+        hour = ts.hour
+        is_day = (CONTEXT_DAY_START_HOUR <= hour < CONTEXT_DAY_END_HOUR)
+        window = "day" if is_day else "night"
+        target = self.day_baseline if is_day else self.night_baseline
+
+        if target is not None and target.get("sample_count", 0) >= min_samples:
+            return (
+                target["mean_idle_flow"],
+                target["std_idle_flow"],
+                target["ucl"],
+                window,
+                False,
+            )
+
+        # Fallback to single combined baseline
+        return (
+            self.mean_idle_flow,
+            self.std_idle_flow,
+            self.ucl,
+            f"{window}_fallback_to_combined",
+            True,
+        )
+
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
     @classmethod
     def from_dict(cls, d: dict) -> "BaselineProfile":
-        return cls(**d)
+        from dataclasses import fields
+        valid_keys = {f.name for f in fields(cls)}
+        filtered = {k: v for k, v in d.items() if k in valid_keys}
+        return cls(**filtered)
 
     def sanity_summary(self, ground_truth_mean: float, ground_truth_std: float) -> str:
         """Human-readable comparison of learned vs. ground-truth parameters."""
@@ -148,6 +201,9 @@ def learn_baselines(
     ewma_lambda: float = EWMA_LAMBDA,
     ucl_l: float = UCL_L_FACTOR,
     quiet: bool = False,
+    gate_z_threshold: float = CONTEXT_GATE_Z_THRESHOLD,
+    gate_rel_diff_threshold: float = CONTEXT_GATE_REL_DIFF_THRESHOLD,
+    shrinkage_k: int = CONTEXT_SHRINKAGE_PSEUDO_COUNT_K,
 ) -> dict[str, BaselineProfile]:
     """
     Learn per-fixture baseline statistics from clean pre-warm telemetry JSONL.
@@ -167,6 +223,8 @@ def learn_baselines(
 
     # Per-fixture state during learning pass
     accumulators:       dict[str, _Welford] = {}
+    day_accumulators:   dict[str, _Welford] = {}
+    night_accumulators: dict[str, _Welford] = {}
     flush_accumulators: dict[str, _Welford] = {}
     flush_start_ts:     dict[str, datetime] = {}
     ewma_state:         dict[str, float]    = {}
@@ -190,6 +248,8 @@ def learn_baselines(
             if fid not in first_ts:
                 first_ts[fid] = ts
                 accumulators[fid]       = _Welford()
+                day_accumulators[fid]   = _Welford()
+                night_accumulators[fid] = _Welford()
                 flush_accumulators[fid] = _Welford()
                 ewma_state[fid]         = 0.0   # will be overridden once we have a mean
             last_ts[fid] = ts
@@ -214,6 +274,11 @@ def learn_baselines(
                     and flush_flag == 0
                     and reading.get("diagnostic_status", "error") == "ok"):
                 accumulators[fid].update(flow)
+                if CONTEXT_DAY_START_HOUR <= ts.hour < CONTEXT_DAY_END_HOUR:
+                    day_accumulators[fid].update(flow)
+                else:
+                    night_accumulators[fid].update(flow)
+
                 # Online EWMA update
                 ewma_state[fid] = (ewma_lambda * flow
                                    + (1.0 - ewma_lambda) * ewma_state[fid])
@@ -252,6 +317,60 @@ def learn_baselines(
         std  = max(acc.std, 0.005)   # floor: avoid UCL collapsing to 0
         ucl  = mean + ucl_l * std
 
+        d_acc = day_accumulators.get(fid)
+        n_acc = night_accumulators.get(fid)
+
+        d_mean = d_acc.mean if (d_acc and d_acc.n > 0) else mean
+        d_std  = max(d_acc.std, 0.005) if (d_acc and d_acc.n > 0) else std
+        nd     = d_acc.n if d_acc else 0
+
+        n_mean = n_acc.mean if (n_acc and n_acc.n > 0) else mean
+        n_std  = max(n_acc.std, 0.005) if (n_acc and n_acc.n > 0) else std
+        nn     = n_acc.n if n_acc else 0
+
+        # PART 1: Per-fixture significance gating
+        se_d = d_std / math.sqrt(nd) if nd > 1 else 1e-6
+        se_n = n_std / math.sqrt(nn) if nn > 1 else 1e-6
+        denom = math.sqrt(se_d**2 + se_n**2)
+        z = (d_mean - n_mean) / denom if denom > 0 else 0.0
+        rel_diff = abs(d_mean - n_mean) / max(mean, 1e-6)
+
+        split_ok = (
+            abs(z) >= gate_z_threshold
+            and rel_diff >= gate_rel_diff_threshold
+            and nd >= CONTEXT_MIN_SAMPLE_COUNT
+            and nn >= CONTEXT_MIN_SAMPLE_COUNT
+        )
+
+        if split_ok:
+            # PART 2: Empirical Bayes shrinkage toward combined baseline
+            k = shrinkage_k
+            shrunk_d_mean = (nd * d_mean + k * mean) / (nd + k)
+            shrunk_d_std  = (nd * d_std + k * std) / (nd + k)
+            shrunk_d_ucl  = shrunk_d_mean + ucl_l * shrunk_d_std
+
+            shrunk_n_mean = (nn * n_mean + k * mean) / (nn + k)
+            shrunk_n_std  = (nn * n_std + k * std) / (nn + k)
+            shrunk_n_ucl  = shrunk_n_mean + ucl_l * shrunk_n_std
+
+            day_dict = {
+                "mean_idle_flow": round(shrunk_d_mean, 6),
+                "std_idle_flow":  round(shrunk_d_std, 6),
+                "ucl":            round(shrunk_d_ucl, 6),
+                "sample_count":   nd,
+                "initial_ewma":   round(shrunk_d_mean, 6),
+            }
+            night_dict = {
+                "mean_idle_flow": round(shrunk_n_mean, 6),
+                "std_idle_flow":  round(shrunk_n_std, 6),
+                "ucl":            round(shrunk_n_ucl, 6),
+                "sample_count":   nn,
+                "initial_ewma":   round(shrunk_n_mean, 6),
+            }
+        else:
+            day_dict = None
+            night_dict = None
+
         started_at   = first_ts.get(fid)
         ended_at     = last_ts.get(fid)
         span         = ended_at - started_at if (started_at and ended_at) else timedelta(0)
@@ -274,7 +393,24 @@ def learn_baselines(
             warmup_complete     = warmup_done,
             warmup_started_at   = started_at.isoformat() if started_at else None,
             warmup_completed_at = ended_at.isoformat() if warmup_done else None,
+            day_baseline        = day_dict,
+            night_baseline      = night_dict,
+            split_enabled       = split_ok,
+            gate_z_score        = round(z, 2),
+            gate_rel_diff       = round(rel_diff, 4),
         )
+
+    if not quiet:
+        print(f"\n--- Context-Adaptive Baseline Significance Gating ---")
+        print(f"{'Fixture ID':16} | {'Day Mean':8} | {'Night Mean':10} | {'Comb Mean':9} | {'Rel Diff':8} | {'Z-Score':8} | {'Status'}")
+        print("-" * 85)
+        for fid in sorted(profiles.keys()):
+            p = profiles[fid]
+            st = 'PASS (SPLIT)' if p.split_enabled else 'FAIL (COMBINED)'
+            d_m = day_accumulators[fid].mean if fid in day_accumulators else 0.0
+            n_m = night_accumulators[fid].mean if fid in night_accumulators else 0.0
+            print(f"{fid:16} | {d_m:8.5f} | {n_m:10.5f} | {p.mean_idle_flow:9.5f} | {p.gate_rel_diff or 0.0:7.1%} | {p.gate_z_score or 0.0:8.2f} | {st}")
+        print("-" * 85 + "\n")
 
     return profiles
 

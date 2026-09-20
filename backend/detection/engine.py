@@ -61,6 +61,10 @@ from detection.trend_detector import TrendDetector
 # ── Config constants (mirrored; keep in sync with app/core/config.py) ─────────
 EWMA_LAMBDA                 = 0.2
 UCL_L_FACTOR                = 3.0
+CONTEXT_ADAPTIVE_BASELINE_ENABLED = True
+CONTEXT_DAY_START_HOUR      = 6
+CONTEXT_DAY_END_HOUR        = 22
+CONTEXT_MIN_SAMPLE_COUNT    = 60
 W1, W2, W3                  = 0.40, 0.35, 0.25
 CONFIDENCE_LOG_ONLY         = 0.50
 CONFIDENCE_ESCALATE         = 0.80
@@ -127,9 +131,17 @@ class DetectionEngine:
         self,
         baseline_profiles: dict[str, BaselineProfile],
         fixture_info:      list[dict[str, str]],   # [{fixture_id, sensor_id, fixture_type, zone_tier}]
+        context_adaptive:  bool = CONTEXT_ADAPTIVE_BASELINE_ENABLED,
+        min_context_samples: int = CONTEXT_MIN_SAMPLE_COUNT,
     ):
         self._baselines: dict[str, BaselineProfile] = baseline_profiles
         self._fixture_meta: dict[str, dict] = {f["fixture_id"]: f for f in fixture_info}
+        self.context_adaptive: bool = context_adaptive
+        self.min_context_samples: int = min_context_samples
+        self._fallback_logged: set[str] = set()
+
+        # Track per-window EWMAs per fixture: fid -> {"day": float, "night": float, "combined": float}
+        self._window_ewma: dict[str, dict[str, float]] = {}
 
         # Initialise per-fixture state, sensor health trackers, and hygiene trackers
         self._states: dict[str, FixtureDetectionState] = {}
@@ -142,11 +154,21 @@ class DetectionEngine:
             sid  = meta.get("sensor_id", fid)
             tier = meta.get("zone_tier", "Tier 4")
 
+            combined_init = bp.initial_ewma if bp else 0.0
+            day_init = bp.day_baseline.get("initial_ewma", combined_init) if (bp and bp.day_baseline) else combined_init
+            night_init = bp.night_baseline.get("initial_ewma", combined_init) if (bp and bp.night_baseline) else combined_init
+
+            self._window_ewma[fid] = {
+                "day": day_init,
+                "night": night_init,
+                "combined": combined_init,
+            }
+
             self._states[fid] = FixtureDetectionState(
                 fixture_id   = fid,
                 zone_tier    = tier,
                 fixture_type = meta.get("fixture_type", "faucet"),
-                ewma         = bp.initial_ewma if bp else 0.0,
+                ewma         = combined_init,
             )
             self._sensor_health[sid] = SensorHealthTracker(sensor_id=sid, fixture_id=fid, zone_tier=tier)
             self._hygiene[fid]       = HygieneTracker(fixture_id=fid, zone_tier=tier)
@@ -291,14 +313,53 @@ class DetectionEngine:
         if diag_status != "ok":
             return events   # other diagnostic states: skip
 
+        if bp:
+            mean, std, ucl, window_name, is_fallback = bp.get_active_baseline(
+                ts,
+                adaptive_enabled=self.context_adaptive,
+                min_samples=self.min_context_samples,
+            )
+        else:
+            mean, std, ucl, window_name, is_fallback = 0.0, 0.025, 0.075, "combined", False
+
+        if is_fallback and fid not in self._fallback_logged:
+            import logging
+            logging.getLogger(__name__).info(
+                "Context-adaptive baseline fallback active for fixture %s: insufficient samples in %s; using combined baseline.",
+                fid, window_name
+            )
+            self._fallback_logged.add(fid)
+
+        if not self.context_adaptive:
+            active_ewma = state.ewma
+        else:
+            is_day = (CONTEXT_DAY_START_HOUR <= ts.hour < CONTEXT_DAY_END_HOUR)
+            segment_key = "day" if (is_day and not is_fallback) else (
+                "night" if not is_fallback else "combined"
+            )
+            active_ewma = self._window_ewma[fid].get(segment_key, state.ewma)
+
         # Baseline protection: freeze EWMA adaptation if trend detector flags suspicious ramping
+        # When is_suspicious is True, both day and night baselines (and combined) are frozen fixture-wide to prevent leak absorption.
         if trend_tracker and trend_tracker.is_suspicious:
             # Creeping leak detected: freeze EWMA to prevent leak from normalizing into baseline
-            pass
+            state.ewma = active_ewma
         else:
-            state.ewma = EWMA_LAMBDA * flow + (1.0 - EWMA_LAMBDA) * state.ewma
+            new_ewma = EWMA_LAMBDA * flow + (1.0 - EWMA_LAMBDA) * active_ewma
+            state.ewma = new_ewma
+            if not self.context_adaptive:
+                if fid in self._window_ewma:
+                    self._window_ewma[fid]["combined"] = state.ewma
+            else:
+                is_day = (CONTEXT_DAY_START_HOUR <= ts.hour < CONTEXT_DAY_END_HOUR)
+                segment_key = "day" if (is_day and not is_fallback) else (
+                    "night" if not is_fallback else "combined"
+                )
+                cur_ewma = self._window_ewma[fid].get(segment_key, state.ewma)
+                new_ewma = EWMA_LAMBDA * flow + (1.0 - EWMA_LAMBDA) * cur_ewma
+                self._window_ewma[fid][segment_key] = new_ewma
+                state.ewma = new_ewma
 
-        ucl = bp.ucl
         if state.ewma <= ucl:
             state.candidate_start_ts = None
             state.consecutive_below_ucl_readings += 1
@@ -322,7 +383,7 @@ class DetectionEngine:
             return events   # not confirmed yet
 
         # ── 7. Confirmed: compute confidence and emit ─────────────────────────
-        dev_norm = (state.ewma - ucl) / max(ucl - bp.mean_idle_flow, 1e-6)
+        dev_norm = (state.ewma - ucl) / max(ucl - mean, 1e-6)
         dev_norm = max(0.0, min(dev_norm, 1.0))
         # occ_score = 1.0 (we are here only when occupancy=0)
         # pf_score  = 1.0 (we are here only when not in_post_flush)
@@ -337,6 +398,10 @@ class DetectionEngine:
         else:
             status = "logged"
 
+        extra_fields = {
+            "baseline_window": window_name,
+            "context_baseline_fallback": is_fallback,
+        }
         ev = _make_event(
             fixture_id      = fid,
             sensor_id       = sensor_id,
@@ -349,6 +414,7 @@ class DetectionEngine:
             ucl             = ucl,
             warmup_complete = bp.warmup_complete,
             status          = status,
+            extra           = extra_fields,
         )
         events.append(ev)
         state.candidate_start_ts = None   # reset so next confirmation is independent

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-15T14:28:40.168180+00:00",
+  "generated_at": "2026-09-20T12:37:55.206595+00:00",
   "profiles": {
     "fix-icu-001": {
       "fixture_id": "fix-icu-001",
@@ -14,7 +14,12 @@
       "std_flush_duration_s": 2.0,
       "warmup_complete": true,
       "warmup_started_at": "2026-09-08T00:00:00+00:00",
-      "warmup_completed_at": "2026-09-14T23:59:30+00:00"
+      "warmup_completed_at": "2026-09-14T23:59:30+00:00",
+      "day_baseline": null,
+      "night_baseline": null,
+      "split_enabled": false,
+      "gate_z_score": -0.73,
+      "gate_rel_diff": 0.0161
     },
     "fix-icu-002": {
       "fixture_id": "fix-icu-002",
@@ -29,7 +34,12 @@
       "std_flush_duration_s": 2.3904084178926372,
       "warmup_complete": true,
       "warmup_started_at": "2026-09-08T00:00:00+00:00",
-      "warmup_completed_at": "2026-09-14T23:59:30+00:00"
+      "warmup_completed_at": "2026-09-14T23:59:30+00:00",
+      "day_baseline": null,
+      "night_baseline": null,
+      "split_enabled": false,
+      "gate_z_score": 3.78,
+      "gate_rel_diff": 0.0823
     },
     "fix-icu-003": {
       "fixture_id": "fix-icu-003",
@@ -44,7 +54,12 @@
       "std_flush_duration_s": 2.785324761399471,
       "warmup_complete": true,
       "warmup_started_at": "2026-09-08T00:00:00+00:00",
-      "warmup_completed_at": "2026-09-14T23:59:30+00:00"
+      "warmup_completed_at": "2026-09-14T23:59:30+00:00",
+      "day_baseline": null,
+      "night_baseline": null,
+      "split_enabled": false,
+      "gate_z_score": 2.31,
+      "gate_rel_diff": 0.0509
     },
     "fix-icu-004": {
       "fixture_id": "fix-icu-004",
@@ -59,7 +74,12 @@
       "std_flush_duration_s": 2.0,
       "warmup_complete": true,
       "warmup_started_at": "2026-09-08T00:00:00+00:00",
-      "warmup_completed_at": "2026-09-14T23:59:30+00:00"
+      "warmup_completed_at": "2026-09-14T23:59:30+00:00",
+      "day_baseline": null,
+      "night_baseline": null,
+      "split_enabled": false,
+      "gate_z_score": -0.96,
+      "gate_rel_diff": 0.0216
     },
     "fix-icu-005": {
       "fixture_id": "fix-icu-005",
@@ -74,7 +94,12 @@
       "std_flush_duration_s": 2.0,
       "warmup_complete": true,
       "warmup_started_at": "2026-09-08T00:00:00+00:00",
-      "warmup_completed_at": "2026-09-14T23:59:30+00:00"
+      "warmup_completed_at": "2026-09-14T23:59:30+00:00",
+      "day_baseline": null,
+      "night_baseline": null,
+      "split_enabled": false,
+      "gate_z_score": -0.43,
+      "gate_rel_diff": 0.0097
     },
     "fix-ot-001": {
       "fixture_id": "fix-ot-001",
@@ -89,7 +114,24 @@
       "std_flush_duration_s": 2.0,
       "warmup_complete": true,
       "warmup_started_at": "2026-09-08T00:00:00+00:00",
-      "warmup_completed_at": "2026-09-14T23:59:30+00:00"
+      "warmup_completed_at": "2026-09-14T23:59:30+00:00",
+      "day_baseline": {
+        "mean_idle_flow": 0.91203,
+        "std_idle_flow": 2.257221,
+        "ucl": 7.683693,
+        "sample_count": 13440,
+        "initial_ewma": 0.91203
+      },
+      "night_baseline": {
+        "mean_idle_flow": 0.646789,
+        "std_idle_flow": 1.922516,
+        "ucl": 6.414336,
+        "sample_count": 6720,
+        "initial_ewma": 0.646789
+      },
+      "split_enabled": true,
+      "gate_z_score": 16.57,
+      "gate_rel_diff": 0.5924
     },
     "fix-ot-002": {
       "fixture_id": "fix-ot-002",
@@ -104,7 +146,24 @@
       "std_flush_duration_s": 2.0,
       "warmup_complete": true,
       "warmup_started_at": "2026-09-08T00:00:00+00:00",
-      "warmup_completed_at": "2026-09-14T23:59:30+00:00"
+      "warmup_completed_at": "2026-09-14T23:59:30+00:00",
+      "day_baseline": {
+        "mean_idle_flow": 0.966487,
+        "std_idle_flow": 2.312504,
+        "ucl": 7.904,
+        "sample_count": 13440,
+        "initial_ewma": 0.966487
+      },
+      "night_baseline": {
+        "mean_idle_flow": 0.710281,
+        "std_idle_flow": 2.007761,
+        "ucl": 6.733565,
+        "sample_count": 6720,
+        "initial_ewma": 0.710281
+      },
+      "split_enabled": true,
+      "gate_z_score": 15.34,
+      "gate_rel_diff": 0.5338
     },
     "fix-ot-003": {
       "fixture_id": "fix-ot-003",
@@ -119,7 +178,24 @@
       "std_flush_duration_s": 2.0,
       "warmup_complete": true,
       "warmup_started_at": "2026-09-08T00:00:00+00:00",
-      "warmup_completed_at": "2026-09-14T23:59:30+00:00"
+      "warmup_completed_at": "2026-09-14T23:59:30+00:00",
+      "day_baseline": {
+        "mean_idle_flow": 0.89634,
+        "std_idle_flow": 2.237993,
+        "ucl": 7.61032,
+        "sample_count": 13440,
+        "initial_ewma": 0.89634
+      },
+      "night_baseline": {
+        "mean_idle_flow": 0.675715,
+        "std_idle_flow": 1.962571,
+        "ucl": 6.563428,
+        "sample_count": 6720,
+        "initial_ewma": 0.675715
+      },
+      "split_enabled": true,
+      "gate_z_score": 13.52,
+      "gate_rel_diff": 0.4914
     },
     "fix-ot-004": {
       "fixture_id": "fix-ot-004",
@@ -134,7 +210,12 @@
       "std_flush_duration_s": 2.0,
       "warmup_complete": true,
       "warmup_started_at": "2026-09-08T00:00:00+00:00",
-      "warmup_completed_at": "2026-09-14T23:59:30+00:00"
+      "warmup_completed_at": "2026-09-14T23:59:30+00:00",
+      "day_baseline": null,
+      "night_baseline": null,
+      "split_enabled": false,
+      "gate_z_score": 0.33,
+      "gate_rel_diff": 0.0075
     },
     "fix-ward-001": {
       "fixture_id": "fix-ward-001",
@@ -149,7 +230,12 @@
       "std_flush_duration_s": 2.0,
       "warmup_complete": true,
       "warmup_started_at": "2026-09-08T00:00:00+00:00",
-      "warmup_completed_at": "2026-09-14T23:59:30+00:00"
+      "warmup_completed_at": "2026-09-14T23:59:30+00:00",
+      "day_baseline": null,
+      "night_baseline": null,
+      "split_enabled": false,
+      "gate_z_score": -0.28,
+      "gate_rel_diff": 0.0061
     },
     "fix-ward-002": {
       "fixture_id": "fix-ward-002",
@@ -164,7 +250,12 @@
       "std_flush_duration_s": 2.3284088136119445,
       "warmup_complete": true,
       "warmup_started_at": "2026-09-08T00:00:00+00:00",
-      "warmup_completed_at": "2026-09-14T23:59:30+00:00"
+      "warmup_completed_at": "2026-09-14T23:59:30+00:00",
+      "day_baseline": null,
+      "night_baseline": null,
+      "split_enabled": false,
+      "gate_z_score": 5.23,
+      "gate_rel_diff": 0.1132
     },
     "fix-ward-003": {
       "fixture_id": "fix-ward-003",
@@ -179,7 +270,12 @@
       "std_flush_duration_s": 2.0718178582636364,
       "warmup_complete": true,
       "warmup_started_at": "2026-09-08T00:00:00+00:00",
-      "warmup_completed_at": "2026-09-14T23:59:30+00:00"
+      "warmup_completed_at": "2026-09-14T23:59:30+00:00",
+      "day_baseline": null,
+      "night_baseline": null,
+      "split_enabled": false,
+      "gate_z_score": 10.38,
+      "gate_rel_diff": 0.2217
     },
     "fix-ward-004": {
       "fixture_id": "fix-ward-004",
@@ -194,7 +290,12 @@
       "std_flush_duration_s": 2.0,
       "warmup_complete": true,
       "warmup_started_at": "2026-09-08T00:00:00+00:00",
-      "warmup_completed_at": "2026-09-14T23:59:30+00:00"
+      "warmup_completed_at": "2026-09-14T23:59:30+00:00",
+      "day_baseline": null,
+      "night_baseline": null,
+      "split_enabled": false,
+      "gate_z_score": 0.19,
+      "gate_rel_diff": 0.0043
     },
     "fix-ward-005": {
       "fixture_id": "fix-ward-005",
@@ -209,7 +310,12 @@
       "std_flush_duration_s": 2.0,
       "warmup_complete": true,
       "warmup_started_at": "2026-09-08T00:00:00+00:00",
-      "warmup_completed_at": "2026-09-14T23:59:30+00:00"
+      "warmup_completed_at": "2026-09-14T23:59:30+00:00",
+      "day_baseline": null,
+      "night_baseline": null,
+      "split_enabled": false,
+      "gate_z_score": 1.04,
+      "gate_rel_diff": 0.023
     },
     "fix-lab-001": {
       "fixture_id": "fix-lab-001",
@@ -224,7 +330,24 @@
       "std_flush_duration_s": 2.0,
       "warmup_complete": true,
       "warmup_started_at": "2026-09-08T00:00:00+00:00",
-      "warmup_completed_at": "2026-09-14T23:59:30+00:00"
+      "warmup_completed_at": "2026-09-14T23:59:30+00:00",
+      "day_baseline": {
+        "mean_idle_flow": 0.712679,
+        "std_idle_flow": 2.019428,
+        "ucl": 6.770963,
+        "sample_count": 13440,
+        "initial_ewma": 0.712679
+      },
+      "night_baseline": {
+        "mean_idle_flow": 0.298268,
+        "std_idle_flow": 1.159582,
+        "ucl": 3.777014,
+        "sample_count": 6720,
+        "initial_ewma": 0.298268
+      },
+      "split_enabled": true,
+      "gate_z_score": 38.38,
+      "gate_rel_diff": 1.3639
     },
     "fix-lab-002": {
       "fixture_id": "fix-lab-002",
@@ -239,7 +362,12 @@
       "std_flush_duration_s": 2.0,
       "warmup_complete": true,
       "warmup_started_at": "2026-09-08T00:00:00+00:00",
-      "warmup_completed_at": "2026-09-14T23:59:30+00:00"
+      "warmup_completed_at": "2026-09-14T23:59:30+00:00",
+      "day_baseline": null,
+      "night_baseline": null,
+      "split_enabled": false,
+      "gate_z_score": -1.56,
+      "gate_rel_diff": 0.0346
     },
     "fix-lab-003": {
       "fixture_id": "fix-lab-003",
@@ -254,7 +382,12 @@
       "std_flush_duration_s": 1.0,
       "warmup_complete": true,
       "warmup_started_at": "2026-09-08T00:00:00+00:00",
-      "warmup_completed_at": "2026-09-14T23:59:30+00:00"
+      "warmup_completed_at": "2026-09-14T23:59:30+00:00",
+      "day_baseline": null,
+      "night_baseline": null,
+      "split_enabled": false,
+      "gate_z_score": 5.27,
+      "gate_rel_diff": 0.1118
     },
     "fix-lob-001": {
       "fixture_id": "fix-lob-001",
@@ -269,7 +402,12 @@
       "std_flush_duration_s": 2.0,
       "warmup_complete": true,
       "warmup_started_at": "2026-09-08T00:00:00+00:00",
-      "warmup_completed_at": "2026-09-14T23:59:30+00:00"
+      "warmup_completed_at": "2026-09-14T23:59:30+00:00",
+      "day_baseline": null,
+      "night_baseline": null,
+      "split_enabled": false,
+      "gate_z_score": -0.97,
+      "gate_rel_diff": 0.0215
     },
     "fix-lob-002": {
       "fixture_id": "fix-lob-002",
@@ -284,7 +422,12 @@
       "std_flush_duration_s": 2.0776059561252898,
       "warmup_complete": true,
       "warmup_started_at": "2026-09-08T00:00:00+00:00",
-      "warmup_completed_at": "2026-09-14T23:59:30+00:00"
+      "warmup_completed_at": "2026-09-14T23:59:30+00:00",
+      "day_baseline": null,
+      "night_baseline": null,
+      "split_enabled": false,
+      "gate_z_score": 5.65,
+      "gate_rel_diff": 0.1197
     },
     "fix-lob-003": {
       "fixture_id": "fix-lob-003",
@@ -299,7 +442,12 @@
       "std_flush_duration_s": 2.2506673983476664,
       "warmup_complete": true,
       "warmup_started_at": "2026-09-08T00:00:00+00:00",
-      "warmup_completed_at": "2026-09-14T23:59:30+00:00"
+      "warmup_completed_at": "2026-09-14T23:59:30+00:00",
+      "day_baseline": null,
+      "night_baseline": null,
+      "split_enabled": false,
+      "gate_z_score": 8.88,
+      "gate_rel_diff": 0.1884
     }
   }
 }

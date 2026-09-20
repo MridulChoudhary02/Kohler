@@ -39,6 +39,15 @@ class Settings(BaseSettings):
     # Days of telemetry required before detection is trusted at full sensitivity
     BASELINE_WARMUP_DAYS: int = 7
 
+    # Context-Adaptive Baseline (Time-of-Day)
+    CONTEXT_ADAPTIVE_BASELINE_ENABLED: bool = True
+    CONTEXT_DAY_START_HOUR: int = 6     # 06:00 inclusive
+    CONTEXT_DAY_END_HOUR: int = 22      # 22:00 exclusive (06:00–22:00 is Day, 22:00–06:00 is Night)
+    CONTEXT_MIN_SAMPLE_COUNT: int = 60  # Minimum idle readings in window before trusting segment baseline
+    CONTEXT_GATE_Z_THRESHOLD: float = 3.0
+    CONTEXT_GATE_REL_DIFF_THRESHOLD: float = 0.25      # 25% relative diff threshold
+    CONTEXT_SHRINKAGE_PSEUDO_COUNT_K: int = 6720       # 1-week equivalent sample size prior
+
     # ── Section 7.2 — EWMA control chart ─────────────────────────────────────
     # λ in: EWMA_t = λ × flow_t + (1−λ) × EWMA_(t−1)
     EWMA_LAMBDA: float = 0.2
