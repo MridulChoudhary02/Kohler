@@ -5,7 +5,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Droplets, LayoutDashboard, Ticket as TicketIcon, Bell, Sparkles, Activity } from 'lucide-react';
+import { Droplets, LayoutDashboard, Ticket as TicketIcon, Sparkles, Activity } from 'lucide-react';
 import { useDashboard } from '../lib/DashboardContext';
 import { DetectionEvent, Ticket } from '../lib/types';
 
@@ -33,7 +33,6 @@ export const Header: React.FC<HeaderProps> = (props) => {
   const navItems = [
     { href: '/', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/tickets', label: 'Tickets', icon: TicketIcon },
-    { href: '/alerts', label: 'Alerts', icon: Bell },
     { href: '/fixtures/health', label: 'Fixture Health', icon: Activity },
   ];
 

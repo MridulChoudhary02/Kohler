@@ -1222,3 +1222,28 @@ Verify via canonical baseline regeneration, full 32-test pytest suite, 15/15 ben
    - Live curl verification: Verified `GET /api/v1/fixtures/fix-lob-002/health` and `GET /api/v1/fixtures/health`.
    - Frontend build: `npm run build` compiled 7/7 routes cleanly with 0 errors.
 
+---
+
+## [2026-09-20 19:30] — Refactor: Remove Standalone /alerts Page & Retain Overview Recent Alerts Widget
+
+**Trigger:** User instruction to remove the redundant standalone `/alerts` page and its top navigation entry while preserving the "Recent Anomaly Events" widget on the Overview dashboard (`/`).
+
+**Prompt/instruction used:**
+Remove the standalone /alerts page from the dashboard, but keep the "recent alerts" widget on the Overview page (/) exactly as it is:
+1. Delete `frontend/src/app/alerts/page.tsx` and its route folder.
+2. In the nav config (`Header.tsx`), remove the `/alerts` entry and unused `Bell` icon.
+3. Do NOT touch `CompactAlertsList.tsx` or its usage inside the Overview page's "recent alerts" widget — that stays.
+4. Check `DashboardProvider` / `useDashboard()` context for alerts-page-specific fetching — verified `events` polling (`fetchEvents({ limit: 100 })`) is shared across `Header.tsx` (waste rate aggregation), Overview `CompactAlertsList.tsx` (recent 5), and ticket drilldown matching; retained without changes.
+5. Search the codebase for remaining links to `/alerts` and confirm removal.
+6. Run `npm run build` (0 errors) and the existing test suite (37/37 passed).
+7. Append short entry to `PROMPT_LOG.md` noting the removal and rationale.
+
+**Action taken & Rationale:**
+- **Removal of `/alerts` page**: The standalone `/alerts` ledger view was redundant with the `/tickets` Kanban board and the modal's Evidence Timeline. Dispatched actionable incidents are tracked through tickets with full diagnostic lifecycles, and chronological detection history is available per-fixture in the Fixture Health detail modal.
+- **Overview Widget Retained**: `CompactAlertsList.tsx` remains the sole, focused operational surface on the `/` dashboard for viewing recent raw anomaly events (including logged or sub-threshold events).
+- **Navigation Cleanup**: Removed `/alerts` from `Header.tsx` `navItems`, leaving a streamlined 4-item navigation: `Dashboard` (`/`), `Tickets` (`/tickets`), `Fixture Health` (`/fixtures/health`), and `Copilot` drawer toggle.
+- **Verification**:
+  - `npm run build`: Compiled 7/7 static routes (`/`, `/_not-found`, `/chat`, `/fixtures/health`, `/tickets`) with 0 errors.
+  - Test suite (`pytest backend/detection/tests/ -v`): 37 passed, 0 failed in 74.89s.
+
+
