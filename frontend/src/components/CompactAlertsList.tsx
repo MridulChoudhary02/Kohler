@@ -29,10 +29,10 @@ export const CompactAlertsList: React.FC<CompactAlertsListProps> = ({
       }
     }
 
-    // Sort descending by detected_at, slice top 8
+    // Sort descending by detected_at, slice top 25
     return Array.from(latestByFixture.values())
       .sort((a, b) => new Date(b.detected_at).getTime() - new Date(a.detected_at).getTime())
-      .slice(0, 8);
+      .slice(0, 25);
   }, [events, selectedZoneId]);
 
   return (
@@ -47,8 +47,16 @@ export const CompactAlertsList: React.FC<CompactAlertsListProps> = ({
         </div>
       </div>
 
-      {/* 2. List rows: clean horizontal rows separated by subtle 1px divider */}
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
+      {/* 2. List rows: scrollable container matching Top Dispatch Tickets visual height */}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          maxHeight: '420px',
+          overflowY: 'auto',
+          paddingRight: '4px',
+        }}
+      >
         {recentAlerts.length === 0 ? (
           <div style={{ padding: '24px 0', textAlign: 'center', color: '#525252', fontSize: '0.8125rem' }}>
             No recent telemetry anomaly events match the selected criteria.
