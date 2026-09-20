@@ -1065,3 +1065,48 @@ Generate a real Alembic migration for sub_type on detection_events, prove round-
    - `npm run build`: Compiled 7/7 static routes with 0 errors.
    - `pytest detection/tests/`: 23 passed in 57.49s.
    - Branch `feature/evidence-timeline-fields` merged into `main`.
+
+---
+
+## [2026-09-20 13:30] — Feature: AI Incident Investigator with Guardrails & Read-Only Verification
+
+**Trigger:** User instruction to build the AI Incident Investigator per specification with numeric-fidelity guardrails, graceful fallbacks, read-only DB verification, and frontend modal integration.
+
+**Prompt/instruction used:**
+Checkout a new branch feature/ai-incident-investigator from main.
+Build the AI Incident Investigator per spec:
+1. Create backend/app/services/investigation_service.py with a function that, given a ticket_id, assembles a deterministic evidence object by querying: ticket, detection_event (including sub_type/detection_rule/anomaly_duration_seconds), fixture, zone, baseline profile (including sensor_health_score, confirmation_window_seconds, last_flush_at), and the last ~20 telemetry readings around detected_at. This must be the ONLY input sent to the LLM — no other context.
+2. LLM call: use the existing litellm/Groq setup (same pattern as summarize_incident in llm_service.py). Prompt it to return STRICTLY structured JSON matching: { "summary": str, "likely_cause": str, "evidence": [str], "recommended_actions": [str], "impact": str, "risk_note": str }. Explicitly instruct the model in the system prompt: it must not invent any numeric sensor value not present in the evidence object, and it must not suggest or imply a different detection outcome than what's already dispatched. Validate the JSON response server-side (schema check) before returning it — if the model returns invalid JSON or free text, retry once, then fail gracefully.
+3. New endpoint: GET /api/v1/tickets/{ticket_id}/investigation — returns the evidence object AND the LLM investigation output together, so the frontend can render facts and AI commentary distinctly.
+4. Guardrail test: write a test that feeds the investigation service a real stuck_valve ticket's evidence and asserts (a) the LLM response is valid against the schema, (b) none of the numeric values in the LLM's "evidence" list differ from the actual evidence object's real numbers (do a cross-check, not just "it ran"), (c) the ticket's own priority_score and status in the DB are completely unchanged after calling this endpoint (prove the investigator is read-only).
+5. Frontend: Add an "AI Investigate" button to FixtureDrillDownModal.tsx (only for open/acknowledged/in_progress tickets). Clicking it calls the new endpoint and renders a distinct section below the existing Evidence Timeline: the AI's summary, likely cause, evidence bullets, recommended actions, impact, and a visible "risk_note" plus a fixed safety line: "AI-generated decision support — technician verification required." Show a loading state while the LLM call is in flight; don't block the rest of the modal.
+
+**Action taken:**
+1. Backend Service (`backend/app/services/investigation_service.py`):
+   - Implemented `assemble_ticket_evidence(ticket_id, db)`: strictly queries ticket, detection_event, fixture, zone, baseline profile, and the last 20 telemetry readings centered around `detected_at`. Formats a clean deterministic evidence payload that constitutes the sole context supplied to the LLM.
+   - Implemented `run_incident_investigation(evidence)`: utilizes Groq `openai/gpt-oss-120b` reasoning model with 1,500 max tokens and system prompt enforcing strict numeric grounding and non-disputed detection outcomes.
+   - Robust JSON extraction (`clean_json_string`) stripping Markdown fences (````json ... ````) and reasoning chatter.
+   - Implemented 1-attempt retry loop on schema validation or JSON decoding errors before returning a graceful fallback error object.
+   - Defined Pydantic models `InvestigationReport` and `InvestigationResponse`.
+2. REST Endpoint:
+   - Added `GET /api/v1/tickets/{ticket_id}/investigation` in `backend/app/api/events.py`.
+   - Returns `{ "ticket_id": str, "evidence": {...}, "investigation": {...}, "error": null }`, completely separating verifiable facts from AI commentary.
+3. Database Invariance & Test Isolation:
+   - Configured `backend/app/core/database.py` with `poolclass=NullPool` during pytest execution to prevent asyncpg cross-event-loop connection pool collisions between synchronous `TestClient` and asynchronous database sessions.
+   - Updated `backend/app/core/config.py` with reliable `SettingsConfigDict` pointing to `backend/.env` regardless of pytest working directory.
+4. Guardrail Test Suite (`backend/detection/tests/test_ai_investigator.py`):
+   - `test_guardrail_stuck_valve_ticket_investigation`:
+     - Schema assertion: validates required fields (`summary`, `likely_cause`, `evidence`, `recommended_actions`, `impact`, `risk_note`).
+     - Numeric cross-check assertion: extracts every number from the LLM's `evidence` list using regular expressions and asserts each value matches a number present in the deterministic evidence object (`evidence_numbers = _collect_numbers_from_object(data["evidence"])`). Verified 100% fidelity: 0 hallucinated numeric values across all runs.
+     - Database invariance assertion: queries the ticket in PostgreSQL post-investigation and asserts `v_ticket.priority_score == initial_priority` and `v_ticket.status == initial_status`, proving the investigation endpoint is strictly read-only.
+   - `test_investigation_retry_and_graceful_error`: asserts retry-on-invalid-JSON behavior and graceful fallback without crashing.
+   - `test_investigation_json_cleaner_and_parser`: validates regex Markdown code-fence stripping.
+5. Frontend Integration (`frontend/src/components/FixtureDrillDownModal.tsx`):
+   - Added "AI Investigate" button in header (rendered only when ticket status is `open`, `acknowledged`, or `in_progress`).
+   - Added `#ai-investigator-section` below Evidence Timeline with non-blocking diagnostic spinner, summary, likely root cause, factual evidence pills, technician action steps, operational/clinical impact, highlighted risk notice, and required safety disclaimer: *"AI-generated decision support — technician verification required."*
+6. Verification & Quality Checks:
+   - Live curl against ticket `13d00e5e-4ff3-493d-a6a4-e6eb32b239ed` executed with complete JSON output verified.
+   - Live Chrome CDP DOM dump captured from running web app demonstrating live AI investigation rendering.
+   - `npm run build`: Compiled 7/7 static routes with 0 errors.
+   - Full pytest suite: 26 passed, 0 failed in 59.48s.
+   - Branch `feature/ai-incident-investigator` committed (`bbce23f`), merged to `main`, and pushed to `origin/main`.
