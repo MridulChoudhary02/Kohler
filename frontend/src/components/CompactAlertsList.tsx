@@ -1,8 +1,7 @@
 // frontend/src/components/CompactAlertsList.tsx — Overview Dashboard Compact Recent 5 Alerts
 
 import React from 'react';
-import Link from 'next/link';
-import { Activity, ArrowRight } from 'lucide-react';
+import { Activity } from 'lucide-react';
 import { DetectionEvent } from '../lib/types';
 
 interface CompactAlertsListProps {
@@ -26,19 +25,14 @@ export const CompactAlertsList: React.FC<CompactAlertsListProps> = ({
 
   return (
     <div className="command-panel" style={{ padding: '20px' }}>
-      {/* 4. Section Header: small-caps muted label + View all -> link pattern in top-right */}
+      {/* Section Header: small-caps muted label */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }} className="tech-divider">
         <div style={{ paddingBottom: '12px' }}>
-          <h2 style={{ fontSize: '0.75rem', fontWeight: 600, color: '#8f8f8f', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <h2 style={{ fontSize: '0.75rem', fontWeight: 600, color: '#8f8f8f', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
             <Activity size={14} color="#8f8f8f" />
             RECENT ANOMALY EVENTS
           </h2>
         </div>
-
-        {/* 3. Solid pill-shaped primary action button */}
-        <Link href="/alerts" className="btn-pill-primary" style={{ marginBottom: '12px' }}>
-          View all <ArrowRight size={13} />
-        </Link>
       </div>
 
       {/* 2. List rows: clean horizontal rows separated by subtle 1px divider */}
