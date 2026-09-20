@@ -20,6 +20,7 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.models.models import DetectionEvent, Fixture, Zone, Ticket, HygieneCounter, BaselineProfile, Sensor, TelemetryReading
 from app.services.llm_service import summarize_incident, answer_facility_query, FALLBACK_SUMMARY
+from app.services.investigation_service import assemble_ticket_evidence, run_incident_investigation, InvestigationResponse
 from detection.sensor_health import SensorHealthTracker
 
 router = APIRouter(tags=["Events & Operations"])
@@ -683,6 +684,38 @@ async def regenerate_ticket_summary(
         await db.commit()
         await db.refresh(ticket)
     return SummaryRegenerateResponse(ticket_id=ticket.ticket_id, summary_text=ticket.summary_text)
+
+
+@router.get(
+    "/tickets/{ticket_id}/investigation",
+    response_model=InvestigationResponse,
+    summary="AI Incident Investigator",
+    description="Assembles deterministic ticket evidence and generates an LLM-driven root cause and impact investigation.",
+)
+async def get_ticket_investigation(
+    ticket_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        evidence = await assemble_ticket_evidence(ticket_id, db)
+    except ValueError as val_err:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(val_err),
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error assembling evidence: {exc}",
+        )
+
+    investigation, err = await run_incident_investigation(evidence)
+    return InvestigationResponse(
+        ticket_id=ticket_id,
+        evidence=evidence,
+        investigation=investigation,
+        error=err,
+    )
 
 
 @router.get(

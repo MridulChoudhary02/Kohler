@@ -146,3 +146,13 @@ export async function sendChatQuery(queryText: string): Promise<{ answer: string
   return res.json();
 }
 
+export async function fetchTicketInvestigation(ticketId: string): Promise<import('./types').InvestigationResponse> {
+  const url = `${API_BASE_URL}/api/v1/tickets/${ticketId}/investigation`;
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) {
+    const errorText = await res.text().catch(() => res.statusText);
+    throw new Error(`Investigation failed: ${errorText}`);
+  }
+  return res.json();
+}
+

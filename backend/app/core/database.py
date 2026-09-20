@@ -6,12 +6,16 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 
+import sys
+from sqlalchemy.pool import NullPool
+
+pool_kwargs = {"poolclass": NullPool} if "pytest" in sys.modules else {"pool_size": 10, "max_overflow": 20}
+
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=settings.DEBUG,
     pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20,
+    **pool_kwargs,
 )
 
 AsyncSessionLocal = async_sessionmaker(

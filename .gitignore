@@ -13,3 +13,5 @@ node_modules/
 .next-dev/
 backend/simulator/output/detection_events.jsonl
 backend/simulator/output/*detection_events*.jsonl
+*.tsbuildinfo
+scratch/

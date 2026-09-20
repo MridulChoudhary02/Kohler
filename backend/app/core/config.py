@@ -4,8 +4,11 @@ Application settings — loaded from environment variables / .env file.
 Every tunable constant named in PRD Sections 7–10 is defined here as a
 named field so detection logic never contains magic numbers.
 """
-import json
+from pathlib import Path
 from pydantic_settings import BaseSettings
+
+_BACKEND_DIR = Path(__file__).resolve().parents[2]
+_ENV_FILE = _BACKEND_DIR / ".env"
 
 
 class Settings(BaseSettings):
@@ -129,7 +132,7 @@ class Settings(BaseSettings):
     CRITICALITY_WEIGHT_TIER4: float = 0.25
 
     class Config:
-        env_file = ".env"
+        env_file = str(_ENV_FILE) if _ENV_FILE.exists() else ".env"
         case_sensitive = True
 
     # ── Derived helpers (not env-overridable, computed from above) ────────────

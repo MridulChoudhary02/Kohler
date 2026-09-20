@@ -94,3 +94,19 @@ export interface FacilityMetrics {
   co2_per_litre: number;
 }
 
+export interface InvestigationReport {
+  summary: string;
+  likely_cause: string;
+  evidence: string[];
+  recommended_actions: string[];
+  impact: string;
+  risk_note: string;
+}
+
+export interface InvestigationResponse {
+  ticket_id: string;
+  evidence: Record<string, any>;
+  investigation: InvestigationReport | null;
+  error: string | null;
+}
+

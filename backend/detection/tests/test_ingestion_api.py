@@ -31,7 +31,13 @@ async def override_get_db():
     mock_session.execute.return_value = mock_res
     yield mock_session
 
-app.dependency_overrides[get_db] = override_get_db
+import pytest
+
+@pytest.fixture(autouse=True)
+def apply_db_override():
+    app.dependency_overrides[get_db] = override_get_db
+    yield
+    app.dependency_overrides.pop(get_db, None)
 
 client = TestClient(app)
 

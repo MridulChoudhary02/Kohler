@@ -1,9 +1,9 @@
 // frontend/src/components/FixtureDrillDownModal.tsx — View 4: Fixture Technical Evidence Modal (Evidence Timeline Spec)
 
 import React, { useState, useEffect } from 'react';
-import { X, BarChart2, Clock, Activity, Droplets, CheckCircle2, AlertTriangle, ArrowRight } from 'lucide-react';
-import { DetectionEvent, Ticket, BaselineProfile, TelemetryReading } from '../lib/types';
-import { fetchFixtureBaseline, fetchFixtureTelemetry, fetchTickets } from '../lib/api';
+import { X, BarChart2, Clock, Activity, Droplets, CheckCircle2, AlertTriangle, ArrowRight, Sparkles, Wrench, ShieldAlert, ListChecks, Loader2 } from 'lucide-react';
+import { DetectionEvent, Ticket, BaselineProfile, TelemetryReading, InvestigationReport } from '../lib/types';
+import { fetchFixtureBaseline, fetchFixtureTelemetry, fetchTickets, fetchTicketInvestigation } from '../lib/api';
 
 interface FixtureDrillDownModalProps {
   event: DetectionEvent | null;
@@ -48,13 +48,19 @@ export const FixtureDrillDownModal: React.FC<FixtureDrillDownModalProps> = ({
   const [baseline, setBaseline] = useState<BaselineProfile | null>(null);
   const [telemetry, setTelemetry] = useState<TelemetryReading[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [investigation, setInvestigation] = useState<InvestigationReport | null>(null);
+  const [investigating, setInvestigating] = useState<boolean>(false);
+  const [investigationError, setInvestigationError] = useState<string | null>(null);
 
   const fixtureId = event?.fixture_id || 'Unknown Fixture';
   const [activeTicket, setActiveTicket] = useState<Ticket | null>(ticket);
 
   useEffect(() => {
     setActiveTicket(ticket);
-  }, [ticket]);
+    setInvestigation(null);
+    setInvestigationError(null);
+    setInvestigating(false);
+  }, [ticket, event?.event_id]);
 
   useEffect(() => {
     if (!fixtureId || fixtureId === 'Unknown Fixture') return;
@@ -158,6 +164,28 @@ export const FixtureDrillDownModal: React.FC<FixtureDrillDownModalProps> = ({
   const eventTagClass = eventType === 'leak' ? 'tag-leak' : eventType === 'hygiene' ? 'tag-hygiene' : 'tag-sensor';
   const tierTagClass = tier === 'Tier 1' ? 'tag-tier1' : tier === 'Tier 2' ? 'tag-tier2' : 'tag-tier3';
 
+  const canInvestigate =
+    !!activeTicket &&
+    ['open', 'acknowledged', 'in_progress'].includes(activeTicket.status);
+
+  const handleRunInvestigation = async () => {
+    if (!activeTicket?.ticket_id) return;
+    setInvestigating(true);
+    setInvestigationError(null);
+    try {
+      const res = await fetchTicketInvestigation(activeTicket.ticket_id);
+      if (res.error) {
+        setInvestigationError(res.error);
+      } else {
+        setInvestigation(res.investigation);
+      }
+    } catch (err: any) {
+      setInvestigationError(err?.message || 'Investigation request failed');
+    } finally {
+      setInvestigating(false);
+    }
+  };
+
   return (
     <div style={{
       position: 'fixed',
@@ -170,7 +198,7 @@ export const FixtureDrillDownModal: React.FC<FixtureDrillDownModalProps> = ({
       justifyContent: 'center',
       padding: '20px'
     }}>
-      <div className="command-panel" style={{
+      <div id="fixture-drilldown-modal-dialog" className="command-panel" style={{
         width: '100%',
         maxWidth: '920px',
         maxHeight: '92vh',
@@ -212,13 +240,49 @@ export const FixtureDrillDownModal: React.FC<FixtureDrillDownModalProps> = ({
             </h2>
           </div>
 
-          <button
-            onClick={onClose}
-            className="btn-action"
-            style={{ padding: '6px', background: '#18181b', border: '1px solid #27272a', borderRadius: '6px', cursor: 'pointer' }}
-          >
-            <X size={16} color="#a1a1aa" />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {canInvestigate && (
+              <button
+                id="btn-ai-investigate"
+                onClick={handleRunInvestigation}
+                disabled={investigating}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 14px',
+                  background: investigating ? '#27272a' : '#1e1b4b',
+                  border: '1px solid #4338ca',
+                  borderRadius: '6px',
+                  color: '#c7d2fe',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  cursor: investigating ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {investigating ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" color="#818cf8" />
+                    <span>Investigating...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={14} color="#818cf8" />
+                    <span>AI Investigate</span>
+                  </>
+                )}
+              </button>
+            )}
+
+            <button
+              onClick={onClose}
+              className="btn-action"
+              style={{ padding: '6px', background: '#18181b', border: '1px solid #27272a', borderRadius: '6px', cursor: 'pointer' }}
+            >
+              <X size={16} color="#a1a1aa" />
+            </button>
+          </div>
         </div>
 
         {/* Section 1: Primary Evidence & Operations Metrics (Requirement 7 & 9) */}
@@ -385,6 +449,183 @@ export const FixtureDrillDownModal: React.FC<FixtureDrillDownModalProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Section: AI Incident Investigator (Requirement 5) */}
+        {(canInvestigate || investigation || investigating || investigationError) && (
+          <div
+            id="ai-investigator-section"
+            style={{
+              background: 'linear-gradient(180deg, #121124 0%, #0d0d14 100%)',
+              border: '1px solid #312e81',
+              borderRadius: '8px',
+              padding: '16px 18px',
+              marginBottom: '22px',
+              position: 'relative'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', borderBottom: '1px solid #1e1b4b', paddingBottom: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ background: '#312e81', padding: '6px', borderRadius: '6px' }}>
+                  <Sparkles size={16} color="#a5b4fc" />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#f5f3ff', letterSpacing: '0.02em', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    AI INCIDENT INVESTIGATOR
+                    <span style={{ fontSize: '0.65rem', background: '#3730a3', color: '#c7d2fe', padding: '2px 7px', borderRadius: '10px', textTransform: 'uppercase', fontWeight: 600 }}>
+                      Autonomous Diagnostics
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.68rem', color: '#818cf8', marginTop: '1px' }}>
+                    Bounded inference over ticket, detection event, telemetry window & baseline profile
+                  </div>
+                </div>
+              </div>
+
+              {canInvestigate && !investigation && !investigating && (
+                <button
+                  id="btn-section-ai-investigate"
+                  onClick={handleRunInvestigation}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 14px',
+                    background: '#4338ca',
+                    border: '1px solid #6366f1',
+                    borderRadius: '6px',
+                    color: '#ffffff',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <Sparkles size={13} />
+                  <span>Run AI Diagnosis</span>
+                </button>
+              )}
+            </div>
+
+            {/* Loading State (Non-blocking) */}
+            {investigating && (
+              <div style={{ padding: '22px 16px', textAlign: 'center', color: '#c7d2fe' }}>
+                <Loader2 size={24} className="animate-spin" style={{ margin: '0 auto 10px auto', color: '#818cf8' }} />
+                <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#f5f3ff' }}>
+                  Synthesizing telemetry data & hydraulic evidence with diagnostic model...
+                </div>
+                <div style={{ fontSize: '0.72rem', color: '#a5b4fc', marginTop: '4px' }}>
+                  Evaluating breach margins, sensor reliability, and operational risk. The rest of the modal remains active.
+                </div>
+              </div>
+            )}
+
+            {/* Error State */}
+            {investigationError && !investigating && (
+              <div style={{ padding: '12px 14px', background: '#450a0a', border: '1px solid #991b1b', borderRadius: '6px', color: '#fecaca', fontSize: '0.75rem' }}>
+                <div style={{ fontWeight: 600, marginBottom: '2px' }}>Investigation Notice</div>
+                {investigationError}
+              </div>
+            )}
+
+            {/* Prompt to run investigation if not yet run */}
+            {!investigation && !investigating && !investigationError && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 2px' }}>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                  Click <strong style={{ color: '#c7d2fe' }}>Run AI Diagnosis</strong> to trigger autonomous analysis of root causes, telemetry data points, and recommended technician actions.
+                </div>
+              </div>
+            )}
+
+            {/* Rendered Diagnostic Report */}
+            {investigation && !investigating && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {/* 1. Summary */}
+                <div style={{ background: '#18181b', padding: '12px 14px', borderRadius: '6px', border: '1px solid #27272a' }}>
+                  <div style={{ fontSize: '0.68rem', fontWeight: 600, color: '#a1a1aa', textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '0.03em' }}>
+                    Diagnostic Summary
+                  </div>
+                  <div style={{ fontSize: '0.82rem', color: '#f4f4f5', lineHeight: 1.55 }}>
+                    {investigation.summary}
+                  </div>
+                </div>
+
+                {/* 2. Likely Cause */}
+                <div style={{ background: '#1c1917', border: '1px solid #44403c', padding: '12px 14px', borderRadius: '6px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                  <Wrench size={16} color="#fbbf24" style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <div>
+                    <div style={{ fontSize: '0.68rem', fontWeight: 600, color: '#f59e0b', textTransform: 'uppercase', marginBottom: '2px', letterSpacing: '0.03em' }}>
+                      Likely Root Cause
+                    </div>
+                    <div style={{ fontSize: '0.82rem', color: '#fafaf9', lineHeight: 1.5 }}>
+                      {investigation.likely_cause}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Evidence Bullets & Recommended Actions Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
+                  {/* Evidence Bullets */}
+                  <div style={{ background: '#141417', border: '1px solid #27272a', padding: '12px 14px', borderRadius: '6px' }}>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#38bdf8', textTransform: 'uppercase', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Activity size={13} color="#38bdf8" />
+                      Verified Evidence Data Points
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: '16px', fontSize: '0.75rem', color: '#d4d4d8', lineHeight: 1.6 }}>
+                      {investigation.evidence.map((bullet, idx) => (
+                        <li key={idx} style={{ marginBottom: '4px' }}>
+                          {bullet}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Recommended Actions */}
+                  <div style={{ background: '#141417', border: '1px solid #27272a', padding: '12px 14px', borderRadius: '6px' }}>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#4ade80', textTransform: 'uppercase', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <ListChecks size={13} color="#4ade80" />
+                      Recommended Technician Actions
+                    </div>
+                    <ol style={{ margin: 0, paddingLeft: '16px', fontSize: '0.75rem', color: '#d4d4d8', lineHeight: 1.6 }}>
+                      {investigation.recommended_actions.map((act, idx) => (
+                        <li key={idx} style={{ marginBottom: '4px' }}>
+                          {act}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                </div>
+
+                {/* 4. Operational & Clinical Impact */}
+                <div style={{ background: '#18181b', padding: '10px 14px', borderRadius: '6px', border: '1px solid #27272a' }}>
+                  <div style={{ fontSize: '0.68rem', fontWeight: 600, color: '#a1a1aa', textTransform: 'uppercase', marginBottom: '3px' }}>
+                    Operational & Clinical Impact
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: '#e4e4e7', lineHeight: 1.5 }}>
+                    {investigation.impact}
+                  </div>
+                </div>
+
+                {/* 5. Visible Risk Note */}
+                <div style={{ background: '#261b17', border: '1px solid #b45309', padding: '10px 14px', borderRadius: '6px', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                  <AlertTriangle size={15} color="#f59e0b" style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <div>
+                    <div style={{ fontSize: '0.68rem', fontWeight: 600, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                      Safety & Clinical Risk Note
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: '#fef3c7', marginTop: '2px', lineHeight: 1.45 }}>
+                      {investigation.risk_note}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 6. Fixed Safety Line */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.7rem', color: '#a1a1aa', fontStyle: 'italic', paddingTop: '4px' }}>
+                  <ShieldAlert size={13} color="#f59e0b" />
+                  <span>AI-generated decision support — technician verification required.</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Section 3: Diagnostic Telemetry & Baseline Metadata (Requirement 7 & 9) */}
         <div style={{ marginBottom: '22px' }}>
