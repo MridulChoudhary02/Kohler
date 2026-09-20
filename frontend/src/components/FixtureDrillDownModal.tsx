@@ -1,7 +1,7 @@
 // frontend/src/components/FixtureDrillDownModal.tsx — View 4: Fixture Technical Evidence Modal (Evidence Timeline Spec)
 
 import React, { useState, useEffect } from 'react';
-import { X, BarChart2, Clock, Activity, Droplets, CheckCircle2, AlertTriangle, ArrowRight, Sparkles, Wrench, ShieldAlert, ListChecks, Loader2 } from 'lucide-react';
+import { X, BarChart2, Clock, Activity, Droplets, CheckCircle2, AlertTriangle, ArrowRight, Sparkles, Wrench, ShieldAlert, ListChecks, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { DetectionEvent, Ticket, BaselineProfile, TelemetryReading, InvestigationReport } from '../lib/types';
 import { fetchFixtureBaseline, fetchFixtureTelemetry, fetchTickets, fetchTicketInvestigation } from '../lib/api';
 
@@ -51,6 +51,7 @@ export const FixtureDrillDownModal: React.FC<FixtureDrillDownModalProps> = ({
   const [investigation, setInvestigation] = useState<InvestigationReport | null>(null);
   const [investigating, setInvestigating] = useState<boolean>(false);
   const [investigationError, setInvestigationError] = useState<string | null>(null);
+  const [showDiagnostics, setShowDiagnostics] = useState<boolean>(false);
 
   const fixtureId = event?.fixture_id || 'Unknown Fixture';
   const [activeTicket, setActiveTicket] = useState<Ticket | null>(ticket);
@@ -104,7 +105,6 @@ export const FixtureDrillDownModal: React.FC<FixtureDrillDownModalProps> = ({
   const zoneName = event?.zone_name || ticket?.zone_id || 'Hospital Zone';
   const tier = event?.criticality_tier || 'Tier 1';
   const status = activeTicket?.status || ticket?.status || event?.status || 'dispatched';
-  const summary = activeTicket?.summary_text || ticket?.summary_text || null;
 
   // Evidence values & rates
   let evidenceDisplay = 'N/A';
@@ -241,44 +241,11 @@ export const FixtureDrillDownModal: React.FC<FixtureDrillDownModalProps> = ({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {canInvestigate && (
-              <button
-                id="btn-ai-investigate"
-                onClick={handleRunInvestigation}
-                disabled={investigating}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '6px 14px',
-                  background: investigating ? '#27272a' : '#1e1b4b',
-                  border: '1px solid #4338ca',
-                  borderRadius: '6px',
-                  color: '#c7d2fe',
-                  fontSize: '0.78rem',
-                  fontWeight: 600,
-                  cursor: investigating ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                {investigating ? (
-                  <>
-                    <Loader2 size={14} className="animate-spin" color="#818cf8" />
-                    <span>Investigating...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles size={14} color="#818cf8" />
-                    <span>AI Investigate</span>
-                  </>
-                )}
-              </button>
-            )}
-
             <button
               onClick={onClose}
               className="btn-action"
               style={{ padding: '6px', background: '#18181b', border: '1px solid #27272a', borderRadius: '6px', cursor: 'pointer' }}
+              aria-label="Close modal"
             >
               <X size={16} color="#a1a1aa" />
             </button>
@@ -627,107 +594,135 @@ export const FixtureDrillDownModal: React.FC<FixtureDrillDownModalProps> = ({
           </div>
         )}
 
-        {/* Section 3: Diagnostic Telemetry & Baseline Metadata (Requirement 7 & 9) */}
-        <div style={{ marginBottom: '22px' }}>
-          <h3 style={{ fontSize: '0.82rem', fontWeight: 600, color: '#f4f4f5', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', letterSpacing: '0.03em', textTransform: 'uppercase' }}>
-            <BarChart2 size={14} color="#71717a" />
-            Statistical Baseline & Diagnostic State
-          </h3>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>
-            <div style={{ background: '#141417', padding: '10px 12px', borderRadius: '6px', border: '1px solid #222225' }}>
-              <div style={{ fontSize: '0.7rem', color: '#71717a', fontWeight: 500 }}>Current Flow (Latest)</div>
-              <div className="font-mono" style={{ fontSize: '0.92rem', fontWeight: 600, color: currentFlowLpm > ucl ? '#f87171' : '#ededed', marginTop: '2px' }}>
-                {currentFlowLpm.toFixed(3)} L/min
-              </div>
+        {/* Collapsible Technical Diagnostics Toggle (Requirement 2) */}
+        <div style={{ marginBottom: '20px', borderTop: '1px solid #222225', paddingTop: '16px' }}>
+          <button
+            id="btn-toggle-diagnostics"
+            type="button"
+            onClick={() => setShowDiagnostics(!showDiagnostics)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              width: '100%',
+              padding: '12px 16px',
+              background: showDiagnostics ? '#18181b' : '#141417',
+              border: `1px solid ${showDiagnostics ? '#3f3f46' : '#27272a'}`,
+              borderRadius: '8px',
+              color: '#ededed',
+              cursor: 'pointer',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              letterSpacing: '0.02em',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <BarChart2 size={15} color="#a1a1aa" />
+              <span>Sensor-Level Technical Diagnostics</span>
             </div>
-
-            <div style={{ background: '#141417', padding: '10px 12px', borderRadius: '6px', border: '1px solid #222225' }}>
-              <div style={{ fontSize: '0.7rem', color: '#71717a', fontWeight: 500 }}>Mean Idle Flow (μ)</div>
-              <div className="font-mono" style={{ fontSize: '0.92rem', fontWeight: 600, color: '#ededed', marginTop: '2px' }}>
-                {meanOffFlow.toFixed(4)} L/min
-              </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#38bdf8', fontSize: '0.75rem', fontFamily: 'monospace' }}>
+              <span>{showDiagnostics ? 'Hide sensor-level diagnostics ▴' : 'Show sensor-level diagnostics ▾'}</span>
+              {showDiagnostics ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
             </div>
+          </button>
 
-            <div style={{ background: '#141417', padding: '10px 12px', borderRadius: '6px', border: '1px solid #222225' }}>
-              <div style={{ fontSize: '0.7rem', color: '#71717a', fontWeight: 500 }}>Upper Control Limit (UCL)</div>
-              <div className="font-mono" style={{ fontSize: '0.92rem', fontWeight: 600, color: '#f87171', marginTop: '2px' }}>
-                {ucl.toFixed(4)} L/min
-              </div>
-            </div>
+          {showDiagnostics && (
+            <div id="technical-diagnostics-section" style={{ marginTop: '14px', padding: '16px', background: '#111113', border: '1px solid #222225', borderRadius: '8px' }}>
+              {/* Section 3: Diagnostic Telemetry & Baseline Metadata */}
+              <div style={{ marginBottom: '22px' }}>
+                <h3 style={{ fontSize: '0.82rem', fontWeight: 600, color: '#f4f4f5', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', letterSpacing: '0.03em', textTransform: 'uppercase' }}>
+                  <BarChart2 size={14} color="#71717a" />
+                  Statistical Baseline & Diagnostic State
+                </h3>
 
-            <div style={{ background: '#141417', padding: '10px 12px', borderRadius: '6px', border: '1px solid #222225' }}>
-              <div style={{ fontSize: '0.7rem', color: '#71717a', fontWeight: 500 }}>Occupancy State</div>
-              <div className="font-mono" style={{ fontSize: '0.88rem', fontWeight: 600, color: occupancyState === 0 ? '#4ade80' : '#fbbf24', marginTop: '2px' }}>
-                {occupancyState === 0 ? '0 (Unoccupied)' : '1 (Occupied)'}
-              </div>
-            </div>
-
-            <div style={{ background: '#141417', padding: '10px 12px', borderRadius: '6px', border: '1px solid #222225' }}>
-              <div style={{ fontSize: '0.7rem', color: '#71717a', fontWeight: 500 }}>Last Flush Recorded</div>
-              <div className="font-mono" style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ededed', marginTop: '2px' }}>
-                {lastFlushAt ? formatTimestamp(lastFlushAt) : 'None prior'}
-              </div>
-            </div>
-
-            <div style={{ background: '#141417', padding: '10px 12px', borderRadius: '6px', border: '1px solid #222225' }}>
-              <div style={{ fontSize: '0.7rem', color: '#71717a', fontWeight: 500 }}>Warmup Adaptation</div>
-              <div className="font-mono" style={{ fontSize: '0.82rem', fontWeight: 600, color: baseline?.warmup_complete ? '#4ade80' : '#fbbf24', marginTop: '2px' }}>
-                {baseline?.warmup_complete ? 'WARMUP COMPLETE' : 'WARMING UP'}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Section 4: Telemetry Readings Time-Series Bar Chart */}
-        <div style={{ borderTop: '1px solid #222225', paddingTop: '18px', marginBottom: '22px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#ededed' }} className="font-mono">
-              RAW SENSOR TELEMETRY READINGS (/fixtures/{fixtureId}/telemetry)
-            </div>
-            {loading && <div style={{ fontSize: '0.72rem', color: '#71717a' }} className="font-mono">Loading readings...</div>}
-          </div>
-
-          {telemetry.length === 0 ? (
-            <div style={{ padding: '20px', textAlign: 'center', color: '#71717a', fontSize: '0.78rem' }}>
-              No telemetry readings stored for this fixture around the detection timestamp.
-            </div>
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', height: '115px', padding: '14px 0 4px 0', borderBottom: '1px solid #222225', overflowX: 'auto' }}>
-              {telemetry.slice(0, 20).map((pt, idx) => {
-                const isBreach = pt.flow_rate_lpm > ucl;
-                const timeStr = new Date(pt.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-
-                return (
-                  <div key={idx} style={{ flex: 1, minWidth: '26px', display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
-                    <div style={{
-                      width: '100%',
-                      maxWidth: '18px',
-                      height: `${Math.min(100, Math.max(10, pt.flow_rate_lpm * 110))}%`,
-                      background: isBreach ? '#f43f5e' : '#38bdf8',
-                      borderRadius: '2px',
-                      position: 'relative'
-                    }}>
-                      <span className="font-mono" style={{ position: 'absolute', top: '-16px', left: '50%', transform: 'translateX(-50%)', fontSize: '0.58rem', color: isBreach ? '#f43f5e' : '#a1a1aa' }}>
-                        {pt.flow_rate_lpm.toFixed(2)}
-                      </span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>
+                  <div style={{ background: '#141417', padding: '10px 12px', borderRadius: '6px', border: '1px solid #222225' }}>
+                    <div style={{ fontSize: '0.7rem', color: '#71717a', fontWeight: 500 }}>Current Flow (Latest)</div>
+                    <div className="font-mono" style={{ fontSize: '0.92rem', fontWeight: 600, color: currentFlowLpm > ucl ? '#f87171' : '#ededed', marginTop: '2px' }}>
+                      {currentFlowLpm.toFixed(3)} L/min
                     </div>
-                    <span className="font-mono" style={{ fontSize: '0.55rem', color: '#71717a', marginTop: '6px', whiteSpace: 'nowrap' }}>{timeStr}</span>
                   </div>
-                );
-              })}
+
+                  <div style={{ background: '#141417', padding: '10px 12px', borderRadius: '6px', border: '1px solid #222225' }}>
+                    <div style={{ fontSize: '0.7rem', color: '#71717a', fontWeight: 500 }}>Mean Idle Flow (μ)</div>
+                    <div className="font-mono" style={{ fontSize: '0.92rem', fontWeight: 600, color: '#ededed', marginTop: '2px' }}>
+                      {meanOffFlow.toFixed(4)} L/min
+                    </div>
+                  </div>
+
+                  <div style={{ background: '#141417', padding: '10px 12px', borderRadius: '6px', border: '1px solid #222225' }}>
+                    <div style={{ fontSize: '0.7rem', color: '#71717a', fontWeight: 500 }}>Upper Control Limit (UCL)</div>
+                    <div className="font-mono" style={{ fontSize: '0.92rem', fontWeight: 600, color: '#f87171', marginTop: '2px' }}>
+                      {ucl.toFixed(4)} L/min
+                    </div>
+                  </div>
+
+                  <div style={{ background: '#141417', padding: '10px 12px', borderRadius: '6px', border: '1px solid #222225' }}>
+                    <div style={{ fontSize: '0.7rem', color: '#71717a', fontWeight: 500 }}>Occupancy State</div>
+                    <div className="font-mono" style={{ fontSize: '0.88rem', fontWeight: 600, color: occupancyState === 0 ? '#4ade80' : '#fbbf24', marginTop: '2px' }}>
+                      {occupancyState === 0 ? '0 (Unoccupied)' : '1 (Occupied)'}
+                    </div>
+                  </div>
+
+                  <div style={{ background: '#141417', padding: '10px 12px', borderRadius: '6px', border: '1px solid #222225' }}>
+                    <div style={{ fontSize: '0.7rem', color: '#71717a', fontWeight: 500 }}>Last Flush Recorded</div>
+                    <div className="font-mono" style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ededed', marginTop: '2px' }}>
+                      {lastFlushAt ? formatTimestamp(lastFlushAt) : 'None prior'}
+                    </div>
+                  </div>
+
+                  <div style={{ background: '#141417', padding: '10px 12px', borderRadius: '6px', border: '1px solid #222225' }}>
+                    <div style={{ fontSize: '0.7rem', color: '#71717a', fontWeight: 500 }}>Warmup Adaptation</div>
+                    <div className="font-mono" style={{ fontSize: '0.82rem', fontWeight: 600, color: baseline?.warmup_complete ? '#4ade80' : '#fbbf24', marginTop: '2px' }}>
+                      {baseline?.warmup_complete ? 'WARMUP COMPLETE' : 'WARMING UP'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 4: Telemetry Readings Time-Series Bar Chart */}
+              <div style={{ borderTop: '1px solid #222225', paddingTop: '18px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#ededed' }} className="font-mono">
+                    RAW SENSOR TELEMETRY READINGS (/fixtures/{fixtureId}/telemetry)
+                  </div>
+                  {loading && <div style={{ fontSize: '0.72rem', color: '#71717a' }} className="font-mono">Loading readings...</div>}
+                </div>
+
+                {telemetry.length === 0 ? (
+                  <div style={{ padding: '20px', textAlign: 'center', color: '#71717a', fontSize: '0.78rem' }}>
+                    No telemetry readings stored for this fixture around the detection timestamp.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', height: '115px', padding: '14px 0 4px 0', borderBottom: '1px solid #222225', overflowX: 'auto' }}>
+                    {telemetry.slice(0, 20).map((pt, idx) => {
+                      const isBreach = pt.flow_rate_lpm > ucl;
+                      const timeStr = new Date(pt.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+
+                      return (
+                        <div key={idx} style={{ flex: 1, minWidth: '26px', display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
+                          <div style={{
+                            width: '100%',
+                            maxWidth: '18px',
+                            height: `${Math.min(100, Math.max(10, pt.flow_rate_lpm * 110))}%`,
+                            background: isBreach ? '#f43f5e' : '#38bdf8',
+                            borderRadius: '2px',
+                            position: 'relative'
+                          }}>
+                            <span className="font-mono" style={{ position: 'absolute', top: '-16px', left: '50%', transform: 'translateX(-50%)', fontSize: '0.58rem', color: isBreach ? '#f43f5e' : '#a1a1aa' }}>
+                              {pt.flow_rate_lpm.toFixed(2)}
+                            </span>
+                          </div>
+                          <span className="font-mono" style={{ fontSize: '0.55rem', color: '#71717a', marginTop: '6px', whiteSpace: 'nowrap' }}>{timeStr}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           )}
-        </div>
-
-        {/* Section 5: Incident Narrative Summary */}
-        <div style={{ borderTop: '1px solid #222225', paddingTop: '16px', marginBottom: '20px' }}>
-          <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#71717a', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-            Incident Narrative Summary
-          </div>
-          <p style={{ fontSize: '0.8125rem', color: summary ? '#e4e4e7' : '#71717a', fontStyle: summary ? 'normal' : 'italic', lineHeight: 1.5, background: '#141417', padding: '12px 14px', borderRadius: '6px', border: '1px solid #222225' }}>
-            {summary || 'Summary pending operational triage'}
-          </p>
         </div>
 
         {/* Modal Footer */}
