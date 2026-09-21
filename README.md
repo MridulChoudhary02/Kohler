@@ -1,6 +1,6 @@
 # Smart Facility & Sustainability Manager — Hospital Edition
 
-> **Track 2 — Smart Facility & Sustainability Manager-MITWPU AI Research Lab Program**
+> **Track 2 Submission — MIT WPU AI Research Lab Program**
 
 A hospital-grade facility intelligence platform that ingests fixture-level telemetry, detects leaks with statistical confidence, predicts hygiene threshold breaches before they occur, and routes explainable maintenance tickets to the right team at the right priority.
 
@@ -32,7 +32,7 @@ A hospital-grade facility intelligence platform that ingests fixture-level telem
 
 ```
 Smart Facility & Sustainability Manager/
-├── PRD_Smart Facility & Sustainability Manager_Track2_Hospital.md       # Full product spec (authoritative)
+├── PRD_Track2_Hospital.md       # Full product spec (authoritative)
 ├── PROMPT_LOG_PROTOCOL.md              # Agent logging protocol
 ├── PROMPT_LOG.md                       # Build log (append-only, per protocol)
 ├── docker-compose.yml                  # Local dev: PostgreSQL + backend
@@ -193,6 +193,6 @@ npm run dev
 ## Documentation
 
 - `PROMPT_LOG.md` — agent build log (converted to submission's Prompts Documentation PDF in Phase 8)
-- `PRD_Smart Facility & Sustainability Manager_Track2_Hospital.md` — authoritative product spec; all implementation must match it
+- `PRD_Track2_Hospital.md` — authoritative product spec; all implementation must match it
 ## Demo Video
 Walkthrough video: <https://drive.google.com/file/d/1WGbEjOZqYK4qxu0xKR3wljCmOcdpofhE/view?usp=sharing>
