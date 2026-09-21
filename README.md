@@ -114,14 +114,14 @@ uvicorn app.main:app --reload
 | Phase | Goal | Status |
 |---|---|---|
 | **Phase 0** | Repo scaffold, schema, seed data | ✅ Complete |
-| Phase 1 | Telemetry Simulator | ⏳ Pending |
-| Phase 2 | Detection Engine Core | ⏳ Pending |
-| Phase 3 | Sensor Health + Hygiene Prediction | ⏳ Pending |
-| Phase 4 | Persistence + API Layer | ⏳ Pending |
-| Phase 5 | Ticket Dispatch Engine | ⏳ Pending |
-| Phase 6 | Dashboard | ⏳ Pending |
-| Phase 7 | LLM Layer | ⏳ Pending |
-| Phase 8 | Validation, Polish, Demo Assets | ⏳ Pending |
+| Phase 1 | Telemetry Simulator | ✅ Complete |
+| Phase 2 | Detection Engine Core | ✅ Complete |
+| Phase 3 | Sensor Health + Hygiene Prediction | ✅ Complete |
+| Phase 4 | Persistence + API Layer | ✅ Complete |
+| Phase 5 | Ticket Dispatch Engine | ✅ Complete |
+| Phase 6 | Dashboard | ✅ Complete |
+| Phase 7 | LLM Layer | ✅ Complete |
+| Phase 8 | Validation, Polish, Demo Assets | ✅ Complete |
 
 ---
 
